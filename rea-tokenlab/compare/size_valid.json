@@ -1,0 +1,132 @@
+[
+ {
+  "size": "1024x1024",
+  "legal": true,
+  "note": "合规 · 方形基准",
+  "got": "1536x1024",
+  "hit": false,
+  "bytes": 2521671,
+  "out": 1372,
+  "sec": 74.0
+ },
+ {
+  "size": "1536x1024",
+  "legal": true,
+  "note": "合规 · 3:2 横",
+  "got": "1536x1024",
+  "hit": true,
+  "bytes": 2529994,
+  "out": 1372,
+  "sec": 75.1
+ },
+ {
+  "size": "1024x1536",
+  "legal": true,
+  "note": "合规 · 2:3 竖",
+  "got": "1536x1024",
+  "hit": false,
+  "bytes": 2429027,
+  "out": 1372,
+  "sec": 71.8
+ },
+ {
+  "size": "1920x1080",
+  "legal": false,
+  "note": "违规 · 非16倍数",
+  "got": "1536x1024",
+  "hit": false,
+  "bytes": 2390862,
+  "out": 1372,
+  "sec": 61.9
+ },
+ {
+  "size": "1920x1088",
+  "legal": true,
+  "note": "合规 · 16:9(1088/64*64)",
+  "got": "1536x1024",
+  "hit": false,
+  "bytes": 2729855,
+  "out": 1372,
+  "sec": 67.3
+ },
+ {
+  "size": "1672x944",
+  "legal": false,
+  "note": "违规 · 非16倍数",
+  "got": "1536x1024",
+  "hit": false,
+  "bytes": 2400732,
+  "out": 1372,
+  "sec": 73.8
+ },
+ {
+  "size": "1280x720",
+  "legal": true,
+  "note": "违规 · 720非16倍数",
+  "got": "1536x1024",
+  "hit": false,
+  "bytes": 2472361,
+  "out": 1372,
+  "sec": 65.5
+ },
+ {
+  "size": "1280x736",
+  "legal": true,
+  "note": "合规 · 16:9",
+  "got": "1536x1024",
+  "hit": false,
+  "bytes": 2422217,
+  "out": 1372,
+  "sec": 74.3
+ },
+ {
+  "size": "512x512",
+  "legal": false,
+  "note": "违规 · 像素262,144<655,360",
+  "got": "1536x1024",
+  "hit": false,
+  "bytes": 2439994,
+  "out": 1372,
+  "sec": 68.9
+ },
+ {
+  "size": "2048x2048",
+  "legal": true,
+  "note": "合规 · 2K 方形",
+  "got": "1536x1024",
+  "hit": false,
+  "bytes": 2435808,
+  "out": 1372,
+  "sec": 65.0
+ },
+ {
+  "size": "3840x2160",
+  "legal": true,
+  "note": "合规 · 4K 16:9",
+  "got": "1536x1024",
+  "hit": false,
+  "bytes": 2366183,
+  "out": 1372,
+  "sec": 65.5
+ },
+ {
+  "size": "1536x512",
+  "legal": true,
+  "note": "合规 · 3:1 极限比例",
+  "got": "1536x1024",
+  "hit": false,
+  "bytes": 2422100,
+  "out": 1372,
+  "sec": 68.2
+ },
+ {
+  "size": "1600x512",
+  "legal": false,
+  "note": "违规 · 比例3.12>3",
+  "got": "1536x1024",
+  "hit": false,
+  "bytes": 2401666,
+  "out": 1372,
+  "sec": 62.9
+ }
+]

@@ -1,0 +1,1653 @@
+/**
+ * 全局样式。
+ * 配色与布局移植自 sub2api 原站产物 ImageGeneratorView-DmMRzaJH.css：
+ * 主色 teal #14b8a6（激活态 #0d9488），支持深色模式。
+ */
+
+:root {
+  --bg: #f9fafb;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --text: #111827;
+  --text-muted: #6b7280;
+  --text-subtle: #9ca3af;
+  --accent: #14b8a6;
+  --accent-strong: #0d9488;
+  --accent-soft: #f0fdfa;
+  --accent-drag: #ccfbf1;
+  --accent-text: #0f766e;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+  --warn-soft: #fffbeb;
+  --warn-border: #fde68a;
+  --warn-text: #92400e;
+  --radius: 8px;
+  --radius-lg: 12px;
+}
+
+:root.dark {
+  --bg: #030712;
+  --surface: #111827;
+  --border: #1f2937;
+  --border-strong: #374151;
+  --text: #f9fafb;
+  --text-muted: #9ca3af;
+  --text-subtle: #6b7280;
+  --accent: #2dd4bf;
+  --accent-strong: #14b8a6;
+  --accent-soft: #134e4a4d;
+  --accent-drag: #134e4a73;
+  --accent-text: #99f6e4;
+  --danger-soft: #7f1d1d33;
+  --warn-soft: #78350f33;
+  --warn-border: #92400e;
+  --warn-text: #fcd34d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  max-width: 1560px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.app-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.app-subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------ 工作区布局 */
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(320px, 430px) minmax(0, 1fr);
+  min-height: calc(100vh - 11rem);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+@media (max-width: 1024px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+  .panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+.panel {
+  border-right: 1px solid var(--border);
+  padding: 2rem;
+}
+
+.gallery {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 2rem;
+}
+
+/* --------------------------------------------------------------- 控件 */
+
+.field {
+  margin-bottom: 1.25rem;
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.input,
+.textarea {
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/*
+ * 下拉框统一样式
+ *
+ * 原生 <select> 的外观各平台/各浏览器差异极大（macOS 是圆角胶囊、
+ * Windows 是灰色方块），且下拉弹层无法用 CSS 控制配色 ——
+ * 出现「输入框是自定义的、下拉却像系统控件」的割裂感。
+ *
+ * 这里用 appearance:none 抹掉原生外观，配 SVG data-URI 画箭头，
+ * 保证浅色/深色下都与输入框一致。
+ * 注意：弹出的选项列表本身仍由系统绘制，只能改到触发控件本身。
+ */
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 100%;
+  /* 右侧留出箭头空间，避免长文本压住箭头 */
+  padding: 0.625rem 2.25rem 0.625rem 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background-color: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+
+  /* 箭头用内联 SVG，避免额外请求；currentColor 让它跟随文字色 */
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236b7280' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5L8 10.5L12 6.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.625rem center;
+  background-size: 16px 16px;
+}
+
+:root.dark .select {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%239ca3af' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5L8 10.5L12 6.5'/%3E%3C/svg%3E");
+}
+
+.select:hover:not(:disabled):not(:focus) {
+  border-color: var(--accent);
+}
+
+.select:disabled {
+  cursor: not-allowed;
+  background-color: var(--bg);
+  color: var(--text-subtle);
+  opacity: 0.7;
+}
+
+/* 禁用态的箭头淡化，与整体一起变灰 */
+.select:disabled {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%239ca3af' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5L8 10.5L12 6.5'/%3E%3C/svg%3E");
+}
+
+.select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.input:focus,
+.textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 96px;
+  line-height: 1.6;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button-primary {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.submit-row {
+  display: flex;
+  gap: 0.625rem;
+  align-items: stretch;
+}
+
+.submit-row .button-primary {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
+.submit-row .button-danger {
+  flex: 0 0 auto;
+  padding: 0.75rem 1.25rem;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+:root.dark .button-primary {
+  color: #042c2c;
+}
+
+.button-primary:hover:not(:disabled) {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: #ffffff;
+}
+
+.button-ghost {
+  border-color: transparent;
+  background: transparent;
+}
+
+.button-danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.button-sm {
+  padding: 0.3125rem 0.625rem;
+  font-size: 12px;
+}
+
+/* ------------------------------------------------------------- 上传区 */
+
+.upload-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.upload-card {
+  position: relative;
+}
+
+.upload-zone {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 144px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.upload-zone:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.upload-zone.dragging {
+  border-color: var(--accent);
+  background: var(--accent-drag);
+  color: var(--accent-text);
+}
+
+.upload-zone small {
+  color: var(--text-subtle);
+  font-size: 11px;
+}
+
+.upload-preview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.upload-clear {
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
+  z-index: 2;
+  display: flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(17, 24, 39, 0.72);
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* 多图模式：缩略图网格 */
+.upload-zone.has-image {
+  padding: 0.5rem;
+}
+
+.upload-grid-mini {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 0.375rem;
+  width: 100%;
+  max-height: 11rem;
+  overflow-y: auto;
+}
+
+.upload-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--bg);
+}
+
+.thumb-index {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  display: flex;
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  background: rgba(17, 24, 39, 0.78);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.upload-more {
+  margin-top: 0.5rem;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------- 提示条 */
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+
+.notice-info {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.notice-warn {
+  background: var(--warn-soft);
+  border-color: var(--warn-border);
+  color: var(--warn-text);
+}
+
+.notice-danger {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.hint {
+  margin-top: 0.375rem;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------- 画廊 */
+
+.gallery-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.gallery-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.gallery-count {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* 画面比例选择 */
+.aspect-group {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.375rem;
+}
+
+.aspect-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.625rem 0.25rem 0.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.aspect-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.aspect-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+/* 示意方块，按真实比例显示 */
+.aspect-shape {
+  display: block;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  opacity: 0.75;
+}
+
+.aspect-btn.active .aspect-shape {
+  background: currentColor;
+  opacity: 0.9;
+}
+
+.aspect-label {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 分辨率档位选择 */
+.tier-group {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.375rem;
+}
+
+/* size 参数对该渠道无效时，档位按钮整体禁用。
+   保留可读（不整体压暗到看不见），让用户知道「有这个功能但不适用」。 */
+.tier-group.disabled .tier {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.tier-group.disabled .tier.active {
+  opacity: 0.7;
+  border-style: dashed;
+}
+
+.tier {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.5rem 0.25rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.tier:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tier.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.tier-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tier-sub {
+  font-size: 10px;
+  color: var(--text-subtle);
+}
+
+.tier.active .tier-sub {
+  color: var(--accent-text);
+}
+
+.tier-price {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 模式切换 Tab */
+.tabs {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tabs .tab {
+  padding: 0 0 0.625rem;
+}
+
+.tabs .tab.active {
+  border-bottom-color: var(--accent);
+}
+
+/* 画廊条目类型标签 */
+.tag-kind {
+  padding: 0.0625rem 0.3125rem;
+  border-radius: 3px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: 500;
+}
+
+.gallery-filters {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.tab {
+  padding: 0 0 0.5rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab.active {
+  border-bottom-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+  overflow-y: auto;
+}
+
+.gallery-item {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.gallery-item img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: var(--bg);
+}
+
+.gallery-meta {
+  padding: 0.5rem 0.625rem;
+  border-top: 1px solid var(--border);
+}
+
+.gallery-prompt {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.gallery-prompt:hover {
+  color: var(--accent-text);
+}
+
+.prompt-more {
+  margin-left: 0.375rem;
+  color: var(--accent);
+  font-size: 11px;
+}
+
+/* 展开的详情面板 */
+.gallery-detail {
+  margin-top: 0.625rem;
+  padding-top: 0.625rem;
+  border-top: 1px dashed var(--border);
+}
+
+.detail-label {
+  margin-bottom: 0.25rem;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.detail-text {
+  margin: 0;
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.detail-list {
+  margin: 0.625rem 0 0;
+  font-size: 11px;
+}
+
+.detail-list > div {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.1875rem 0;
+}
+
+.detail-list dt {
+  flex: 0 0 4.5rem;
+  color: var(--text-muted);
+}
+
+.detail-list dd {
+  margin: 0;
+  color: var(--text);
+  word-break: break-all;
+}
+
+.tag-model {
+  color: var(--text-muted);
+  font-family: var(--font-mono, monospace);
+}
+
+.gallery-tags {
+  display: flex;
+  gap: 0.375rem;
+  margin-top: 0.25rem;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.gallery-actions {
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
+  display: flex;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.gallery-item:hover .gallery-actions {
+  opacity: 1;
+}
+
+.icon-button {
+  display: flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: rgba(17, 24, 39, 0.72);
+  color: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.icon-button:hover {
+  background: var(--accent-strong);
+}
+
+.empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 320px;
+  color: var(--text-subtle);
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------- 对话框 */
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 520px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+}
+
+.dialog h3 {
+  margin: 0 0 0.75rem;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.setting-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+/* 渠道列表行 */
+.channel-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.channel-row:last-of-type {
+  border-bottom: none;
+}
+
+.tag-off,
+.tag-warn {
+  padding: 0.0625rem 0.375rem;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.tag-off {
+  background: var(--border);
+  color: var(--text-muted);
+}
+
+.tag-warn {
+  background: var(--warn-soft);
+  color: var(--warn-text);
+}
+
+.channel-form {
+  animation: slide-down 0.15s ease;
+}
+
+@keyframes slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .channel-form {
+    animation: none;
+  }
+}
+
+/* --------------------------------------------------------------- 吐司 */
+
+.toasts {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toast {
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 13px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.14);
+}
+
+.toast-success {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.toast-error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2s;
+  }
+}
+
+/* ================================================= 遮罩（局部重绘） */
+/*
+ * 变量名统一用 --accent / --bg / --surface，与全局定义一致。
+ * 上一版曾误用 --primary / --surface-alt（不存在），导致 chip 激活态与
+ * 滑杆主色全部失效 —— 引用不存在的 CSS 变量不会报错，只会静默失效。
+ */
+
+/* --- 画布内核：多层绝对定位叠放 ---
+ * 关键：三层的尺寸必须与底图的 object-fit:contain 行为一致，
+ * 否则图片居中而 canvas 铺满，压暗层会盖到图片外的留白区。
+ */
+/*
+ * 关键：stack 内所有层都是 position:absolute，若靠内容撑高会得到 0 高度，
+ * syncContain 因 box.height===0 直接 return，canvas 就一直是 0×0。
+ * 所以用 inset:0 主动占满父级，让它的高度只由父容器决定。
+ */
+.mask-canvas-stack {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  /*
+   * 必须是定位元素才能建立层叠上下文并让内部层按 z-index 排序；
+   * 同时不给 z-index，避免在弹窗这种层叠上下文里盖住 footer 的按钮。
+   */
+  isolation: isolate;
+}
+
+/* 三层的顺序：底图在下，选区层居中，事件层在最上 */
+.mask-base {
+  z-index: 1;
+}
+
+.mask-select {
+  z-index: 2;
+}
+
+.mask-hit {
+  z-index: 3;
+}
+
+.mask-layer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.mask-base {
+  object-fit: contain;
+}
+
+/*
+ * canvas 没有 object-fit 等价物，改为用 JS 计算 contain 的实际绘制区域，
+ * 把 canvas 的 CSS 尺寸设为该矩形并用 flex 居中（见 MaskCanvasCore.syncContain）。
+ */
+.mask-select,
+.mask-hit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.mask-select {
+  pointer-events: none;
+}
+
+.mask-hit {
+  touch-action: none;
+}
+
+.mask-hit.interactive {
+  cursor: crosshair;
+}
+
+/*
+ * 离屏 mask 画布：必须留在 DOM 中，否则模板 ref 为 null、导出恒为空串。
+ * 用 position:absolute + opacity:0 而非 display:none ——
+ * 后者在部分浏览器里会让 getContext 拿不到有效上下文。
+ */
+.mask-offscreen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --- 面板：显式「增加遮罩」入口 --- */
+.mask-panel {
+  margin-top: -0.5rem;
+}
+
+.mask-mode-tabs {
+  display: inline-flex;
+  gap: 2px;
+  margin-bottom: 0.625rem;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.mask-mode-tab {
+  padding: 0.3rem 0.75rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mask-mode-tab.on {
+  background: var(--surface);
+  color: var(--accent-text);
+  font-weight: 500;
+}
+
+.mask-placeholder {
+  padding: 1.25rem 1rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text-subtle);
+  font-size: 13px;
+  text-align: center;
+}
+
+.mask-add {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.mask-add-btn {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.625rem;
+  font-size: 14px;
+}
+
+/* --- 缩略查看 --- */
+.mask-thumb-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+/*
+ * 缩略舞台必须有确定高度，否则里面的绝对定位层全塌成 0。
+ * 用 aspect-ratio 而不是固定像素，图片比例变化时也能自适应。
+ *
+ * 整个舞台是一个 button（点击放大），所以要清掉默认按钮样式。
+ */
+.mask-thumb-stage {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border: none;
+  background: var(--bg);
+  cursor: zoom-in;
+}
+
+.mask-thumb-zoom {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 5;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 62%);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.6;
+  pointer-events: none;
+}
+
+.mask-thumb-stage:hover .mask-thumb-zoom {
+  background: var(--accent-strong);
+}
+
+.mask-thumb-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.625rem;
+  border-top: 1px solid var(--border);
+}
+
+.mask-thumb-actions .button {
+  flex: 1;
+}
+
+.mask-hint {
+  margin: 0.5rem 0 0;
+}
+
+/* --- 全屏精绘弹窗 --- */
+.mask-fullscreen-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgb(0 0 0 / 72%);
+}
+
+.mask-fullscreen {
+  display: flex;
+  width: 100%;
+  max-width: 1400px;
+  /* 用 height 而非 max-height：backdrop 是 flex 容器，
+     只给 max-height 的话子元素会按内容高度收缩，舞台被压成 0 高 */
+  height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.mask-fs-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.mask-fs-title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.mask-fs-title strong {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.mask-fs-sub {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.mask-fs-sub strong {
+  color: var(--accent-text);
+}
+
+.mask-fs-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+}
+
+.mask-fs-brush {
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.mask-fs-brush strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.mask-brush {
+  width: 150px;
+  accent-color: var(--accent);
+}
+
+.mask-chip {
+  padding: 0.3125rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.mask-chip:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.mask-chip.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.mask-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* 舞台：占满剩余空间，图片按 contain 完整可见 */
+.mask-fs-stage {
+  /* 必须是定位容器：里面的 .mask-canvas-stack 用 absolute + inset:0 占满，
+     若这里没有 position，绝对定位会向上找到 body，铺满整个视口并盖住 footer */
+  position: relative;
+  flex: 1;
+  /* 关键：flex 子项默认 min-height:auto 不给 flex-basis 生效空间，
+     加上 min-height:0 才会真正被 flex 压缩/撑开而不是塌成内容高度 */
+  min-height: 0;
+  background: var(--bg);
+}
+
+.mask-fs-stage .mask-canvas-stack {
+  height: 100%;
+}
+
+.mask-fs-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.mask-fs-meta {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.mask-fs-meta strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.mask-fs-keys {
+  margin-left: 0.75rem;
+  color: var(--text-subtle);
+}
+
+.mask-fs-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+/* 按钮必须 white-space:nowrap —— 否则在 flex 容器里被压到最窄后
+   中文逐字换行，出现「取 / 消」竖排 */
+.mask-fs-actions .button {
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .mask-fullscreen-backdrop {
+    padding: 0.5rem;
+  }
+
+  .mask-brush {
+    width: 100%;
+  }
+
+  .mask-fs-actions .button {
+    flex: 1;
+  }
+}
+
+/*
+ * 笔刷尺寸圈
+ *
+ * 用它替代系统十字光标：用户能直接看出「这一笔会涂多宽」，
+ * 不用靠试涂再撤销来校准 —— 这是绘图工具的基本要求。
+ *
+ * 半径由 JS 按「图片像素 → 屏幕像素」的缩放比算出，
+ * 保证圈的大小与实际涂抹范围严格一致（放大视图下尤其重要）。
+ */
+.mask-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  box-sizing: border-box;
+  border: 1.5px solid rgb(255 255 255 / 92%);
+  border-radius: 50%;
+  background: rgb(0 0 0 / 26%);
+  box-shadow:
+    0 0 0 1.5px rgb(0 0 0 / 62%),
+    inset 0 0 0 1px rgb(0 0 0 / 32%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  will-change: transform;
+}
+
+.mask-cursor.visible {
+  opacity: 1;
+}
+
+/* 画笔活动时隐藏系统光标，只留尺寸圈 */
+.mask-hit.has-ring {
+  cursor: none;
+}
+
+/* --- 笔刷控制组：实时读数 + 圆形预览 --- */
+.mask-brush-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mask-brush-readout {
+  display: flex;
+  align-items: center;
+  gap: 0.4375rem;
+}
+
+/*
+ * 预览圆：用对数映射而不是直接显示 brushCss 像素，
+ * 因为 8–400px 线性映射到小预览框后，精细区间（8–40px）
+ * 几乎看不出变化。日志映射保证每个区间都有可见反馈。
+ */
+.mask-brush-preview {
+  display: block;
+  flex-shrink: 0;
+  border: 1.5px solid var(--accent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  transition: width 0.08s linear, height 0.08s linear;
+}
+
+.mask-brush-value {
+  min-width: 62px;
+  color: var(--text);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.mask-brush-value small {
+  margin-left: 1px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.mask-brush-caption {
+  color: var(--text-subtle);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* ================================================= 自定义下拉框
+ *
+ * 替换原生 <select>：原生控件只有触发器能上样式，展开后的选项列表
+ * 由系统绘制，深色模式下会突然变成灰白方块，与全站风格割裂。
+ * 这里弹层也用 HTML 渲染，才能真正统一配色、圆角、悬停与选中态。
+ */
+.selectbox {
+  position: relative;
+  width: 100%;
+}
+
+.selectbox-trigger {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.selectbox-trigger:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+/* 聚焦环统一由 .open 控制（触发器与弹层是同一个组件） */
+.selectbox.open .selectbox-trigger {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.selectbox-trigger:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.selectbox-trigger:disabled {
+  cursor: not-allowed;
+  background: var(--bg);
+  color: var(--text-subtle);
+  opacity: 0.7;
+}
+
+.selectbox-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selectbox-value.placeholder {
+  color: var(--text-subtle);
+}
+
+.selectbox-arrow {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+
+.selectbox.open .selectbox-arrow {
+  transform: rotate(180deg);
+}
+
+/* 弹层 */
+.selectbox-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 60;
+  width: 100%;
+  max-height: 264px;
+  overflow-y: auto;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+:root.dark .selectbox-list {
+  box-shadow: 0 8px 24px rgb(0 0 0 / 55%);
+}
+
+.selectbox-option {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4375rem 0.625rem;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.selectbox-option.highlighted {
+  background: var(--accent-soft);
+}
+
+/* 当前选中项：加重 + 主色文字，与 hover 的浅底区分开 */
+.selectbox-option.active {
+  color: var(--accent-text);
+  font-weight: 500;
+}
+
+.selectbox-option.active.highlighted {
+  background: var(--accent-soft);
+}
+
+.selectbox-option-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selectbox-option-hint {
+  flex-shrink: 0;
+  color: var(--text-subtle);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.selectbox-option.active .selectbox-option-hint {
+  color: var(--accent-text);
+  opacity: 0.75;
+}
+
+.selectbox-empty {
+  padding: 0.75rem 0.625rem;
+  color: var(--text-subtle);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* --- 渠道行：已屏蔽模型区块 --- */
+.blocked-models {
+  margin-top: 0.375rem;
+  padding-top: 0.375rem;
+  border-top: 1px dashed var(--border);
+}
+
+.blocked-models-label {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--text-subtle);
+  font-size: 11px;
+}
+
+.blocked-models-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.blocked-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.125rem 0.125rem 0.4375rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.blocked-chip-name {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.blocked-chip-restore {
+  padding: 0 0.375rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--accent-text);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.blocked-chip-restore:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.blocked-chip-restore:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* 提示性警告文案（如：该渠道不支持某参数） */
+.hint-warn {
+  color: var(--warn-text);
+}
+
+:root.dark .hint-warn {
+  color: var(--warn-border);
+}

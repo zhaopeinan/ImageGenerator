@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="图像生成与编辑">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2dd4bf"/>
+      <stop offset="1" stop-color="#0d9488"/>
+    </linearGradient>
+    <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#ccfbf1"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="15" fill="url(#bg)"/>
+
+  <!--
+    图形刻意极简：图标要在 16px 标签页上仍可辨识，
+    只保留「图片框 + 山形图」两个要素。
+    试过加画笔和角标，前者小尺寸糊成一团且溢出画布，
+    后者贴在边框上像缺口 —— 都去掉了。
+  -->
+
+  <!-- 图像框：略微上移，给底部留出山形空间 -->
+  <rect x="14" y="14" width="36" height="36" rx="5"
+        fill="none" stroke="#ffffff" stroke-width="4"/>
+
+  <!-- 山形图：图像内容的通用符号 -->
+  <path d="M19 43 L28 31 L34.5 38.5 L39.5 33 L45 43 Z" fill="url(#fill)"/>
+</svg>

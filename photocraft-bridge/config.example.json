@@ -1,0 +1,14 @@
+{
+  "port": 7878,
+  "token_file": "./.exchange/control.token",
+  "bridge_dir": "./.exchange",
+  "image_editor_base": "http://127.0.0.1:5179",
+  "image_editor_dir": "../image-editor",
+  "channelId": null,
+  "model": "gpt-image-2",
+  "size": "1024x1024",
+  "quality": "high",
+  "source": "composite",
+  "crop_padding": 32,
+  "photocraft_app": "/Applications/PhotoCraft.app/Contents/MacOS/PhotoCraft"
+}

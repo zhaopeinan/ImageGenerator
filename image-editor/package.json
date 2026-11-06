@@ -1,0 +1,72 @@
+{
+  "name": "shenbi",
+  "private": true,
+  "version": "1.1.0",
+  "description": "神笔 — 图像生成与编辑",
+  "author": "peinan",
+  "type": "module",
+  "main": "electron/main.mjs",
+  "scripts": {
+    "dev": "vite",
+    "dev:api": "node server/index.js",
+    "start": "npm run build && node server/index.js",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "electron:dev": "npm run build && electron .",
+    "electron:pack": "npm run build && electron-builder --mac --dir",
+    "electron:dist": "npm run build && electron-builder --mac"
+  },
+  "dependencies": {
+    "pinia": "^2.1.7",
+    "vue": "^3.5.43"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "electron": "^35.2.1",
+    "electron-builder": "^26.0.12",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vue-tsc": "^2.2.0"
+  },
+  "build": {
+    "appId": "app.shenbi.desktop",
+    "productName": "神笔",
+    "copyright": "Copyright © peinan",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "server/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        },
+        {
+          "target": "dir",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "神笔"
+    }
+  }
+}

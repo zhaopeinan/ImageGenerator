@@ -1,0 +1,1 @@
+function l(n,t,s=window.location.origin){const a=t.startsWith("/")?t:`/${t}`,i=new URL(n||"/api/v1",s);let e=i.pathname.replace(/\/+$/,"");return e.endsWith("/api/v1")?e=e.slice(0,-7):e.endsWith("/api")?e=e.slice(0,-4):e.endsWith("/v1")&&(e=e.slice(0,-3)),i.pathname=`${e}${a}`||a,i.search="",i.hash="",i.toString()}export{l as b};

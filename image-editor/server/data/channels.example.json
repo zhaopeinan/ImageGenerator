@@ -1,0 +1,17 @@
+{
+  "_comment": "复制为 channels.json 后填入 apiKey。channels.json 含密钥，已被 .gitignore 排除，勿强制加入版本库。",
+  "channels": [
+    {
+      "id": "example-main",
+      "name": "示例渠道",
+      "endpoint": "https://api.example.com",
+      "apiKey": "",
+      "note": "OpenAI 兼容的 images 接口",
+      "enabled": true,
+      "sizeViaPrompt": false,
+      "qualityPassthrough": true,
+      "unavailableModels": {},
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    }
+  ]
+}

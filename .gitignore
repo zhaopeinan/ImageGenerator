@@ -1,0 +1,64 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Local tooling / personal notes (may contain keys or paths)
+.aris/
+.workbuddy/
+.cursor/
+
+# Secrets & credentials
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+**/control.token
+**/*.token
+
+# Runtime / local data (API keys live here)
+image-editor/server/data/*
+!image-editor/server/data/.gitkeep
+!image-editor/server/data/channels.example.json
+photocraft-bridge/.exchange/
+photocraft-bridge/config.json
+
+# Dependencies & virtualenvs
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.Python
+*.egg-info/
+
+# Build / pack outputs
+**/dist/
+image-editor/release/
+*.log
+*.tar
+*.tar.gz
+*.dmg
+
+# Rust / native
+**/target/
+**/*.rs.bk
+
+# RE research dumps with absolute local paths / proprietary upstream blobs
+rea-tokenlab/rea_evidence.json
+rea-tokenlab/compare/**/results.json
+rea-tokenlab/upstream/
+rea-tokenlab/target/
+
+# Screenshots that may show live channel endpoints / personal UI state
+rea-tokenlab/report/ui-04-channels.png
+rea-tokenlab/report/ui-06-live.png
+rea-tokenlab/report/ui-07-real-channels.png
+rea-tokenlab/report/ui-25-model-per-channel.png
+

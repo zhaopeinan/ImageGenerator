@@ -1,0 +1,11 @@
+config.json
+*.token
+__pycache__/
+*.py[cod]
+.Python
+.venv/
+venv/
+*.png
+!docs/**/*.png
+.DS_Store
+.exchange/
