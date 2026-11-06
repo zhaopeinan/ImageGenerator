@@ -1,60 +1,35 @@
 /**
- * 神笔视觉系统 — 暗色工作室 + 朱砂强调
- * 气质：本地 AI 生图工作台，而非通用 SaaS 仪表盘。
+ * 神笔视觉系统 — 浅色极简
+ * 少装饰、高对比、功能外露；下拉用原生 select。
  */
 
 :root {
-  --bg: #070809;
-  --bg-elevated: #0e1014;
-  --surface: #12151b;
-  --surface-2: #181c24;
-  --border: rgba(255, 255, 255, 0.06);
-  --border-strong: rgba(255, 255, 255, 0.12);
-  --text: #f3f1ec;
-  --text-muted: #9a968c;
-  --text-subtle: #6b675e;
-  --accent: #e8573a;
-  --accent-strong: #ff6b4a;
-  --accent-soft: rgba(232, 87, 58, 0.14);
-  --accent-drag: rgba(232, 87, 58, 0.22);
-  --accent-text: #ffb4a2;
-  --danger: #ff6b6b;
-  --danger-soft: rgba(255, 107, 107, 0.12);
-  --warn-soft: rgba(245, 180, 70, 0.12);
-  --warn-border: rgba(245, 180, 70, 0.35);
-  --warn-text: #f5d08a;
-  --radius: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 22px;
-  --shadow-dialog: 0 28px 80px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --bg: #f6f6f4;
+  --bg-elevated: #eeeeeb;
+  --surface: #ffffff;
+  --surface-2: #fafaf8;
+  --border: #e6e6e1;
+  --border-strong: #d4d4cd;
+  --text: #1a1a18;
+  --text-muted: #6b6b63;
+  --text-subtle: #9a9a90;
+  --accent: #c2412d;
+  --accent-strong: #a83524;
+  --accent-soft: #f8ebe7;
+  --accent-drag: #f3ddd6;
+  --accent-text: #8f2f20;
+  --danger: #c62828;
+  --danger-soft: #fdecea;
+  --warn-soft: #fff7e8;
+  --warn-border: #efd7a2;
+  --warn-text: #8a5a12;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-dialog: 0 16px 48px rgba(26, 26, 24, 0.12);
   --font-ui: 'Outfit', 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB',
     'Microsoft YaHei', sans-serif;
   --font-mono: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
-  color-scheme: dark;
-}
-
-/* 浅色备选（html.light） */
-:root.light {
-  --bg: #f4f2ee;
-  --bg-elevated: #ebe7e0;
-  --surface: #ffffff;
-  --surface-2: #f7f5f1;
-  --border: rgba(20, 16, 12, 0.08);
-  --border-strong: rgba(20, 16, 12, 0.14);
-  --text: #16130f;
-  --text-muted: #6f6a60;
-  --text-subtle: #9a9488;
-  --accent: #d4472c;
-  --accent-strong: #b83720;
-  --accent-soft: rgba(212, 71, 44, 0.1);
-  --accent-drag: rgba(212, 71, 44, 0.16);
-  --accent-text: #9a2f1c;
-  --danger: #c62828;
-  --danger-soft: #fdecea;
-  --warn-soft: #fff6e5;
-  --warn-border: #f0d59a;
-  --warn-text: #8a5a12;
-  --shadow-dialog: 0 24px 60px rgba(20, 16, 12, 0.18);
   color-scheme: light;
 }
 
@@ -65,10 +40,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(1200px 600px at 12% -10%, rgba(232, 87, 58, 0.12), transparent 55%),
-    radial-gradient(900px 500px at 100% 0%, rgba(90, 120, 180, 0.08), transparent 50%),
-    var(--bg);
+  background: var(--bg);
   color: var(--text);
   font-family: var(--font-ui);
   font-size: 14px;
@@ -88,52 +60,50 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.25rem;
-  padding: 0.85rem 1.1rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  margin-bottom: 1rem;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
 }
 
 .app-brand {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.75rem;
   min-width: 0;
 }
 
 .app-mark {
   flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   object-fit: cover;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 24px rgba(232, 87, 58, 0.2);
+  box-shadow: 0 0 0 1px var(--border);
 }
 
 .app-title {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 1.1;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
 }
 
 .app-title em {
   font-style: normal;
-  color: var(--accent);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  font-size: 0.72em;
-  margin-left: 0.35rem;
-  vertical-align: 0.12em;
-  opacity: 0.9;
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  font-size: 0.68em;
+  margin-left: 0.4rem;
+  vertical-align: 0.1em;
 }
 
 .app-subtitle {
-  margin: 0.2rem 0 0;
+  margin: 0.15rem 0 0;
   font-size: 12px;
   color: var(--text-muted);
   white-space: nowrap;
@@ -152,13 +122,12 @@ body {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-  min-height: calc(100vh - 7.5rem);
+  grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+  min-height: calc(100vh - 6.5rem);
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset;
 }
 
 @media (max-width: 1024px) {
@@ -173,8 +142,8 @@ body {
 
 .panel {
   border-right: 1px solid var(--border);
-  padding: 1.5rem 1.35rem 1.75rem;
-  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  padding: 1.35rem 1.25rem 1.5rem;
+  background: var(--surface);
   overflow-y: auto;
 }
 
@@ -182,10 +151,8 @@ body {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  padding: 1.5rem 1.35rem 1.75rem;
-  background:
-    radial-gradient(800px 400px at 80% 0%, rgba(232, 87, 58, 0.05), transparent 55%),
-    var(--bg-elevated);
+  padding: 1.35rem 1.25rem 1.5rem;
+  background: var(--surface-2);
 }
 
 /* --------------------------------------------------------------- 控件 */
@@ -245,14 +212,10 @@ body {
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 
   /* 箭头用内联 SVG，避免额外请求；currentColor 让它跟随文字色 */
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%239a968c' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5L8 10.5L12 6.5'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236b6b63' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5L8 10.5L12 6.5'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.625rem center;
   background-size: 16px 16px;
-}
-
-:root.light .select {
-  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236f6a60' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5L8 10.5L12 6.5'/%3E%3C/svg%3E");
 }
 
 .select:hover:not(:disabled):not(:focus) {
@@ -301,26 +264,21 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
-  padding: 0.5rem 0.95rem;
+  padding: 0.45rem 0.85rem;
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background: var(--surface-2);
+  border-radius: var(--radius);
+  background: var(--surface);
   color: var(--text);
   font-family: inherit;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.18s ease, border-color 0.18s ease, opacity 0.18s ease,
-    transform 0.18s ease, box-shadow 0.18s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }
 
 .button:hover:not(:disabled) {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--border-strong));
-  background: var(--accent-soft);
-}
-
-.button:active:not(:disabled) {
-  transform: translateY(1px);
+  border-color: var(--text-subtle);
+  background: var(--bg-elevated);
 }
 
 .button:disabled {
@@ -330,15 +288,15 @@ body {
 
 .button-primary {
   width: 100%;
-  padding: 0.8rem 1.1rem;
-  border-color: transparent;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent-strong), var(--accent) 55%, #c43a24);
-  color: #fff7f4;
+  padding: 0.75rem 1rem;
+  border-color: var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: #ffffff;
   font-size: 14px;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  box-shadow: 0 10px 28px rgba(232, 87, 58, 0.28);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: none;
 }
 
 .submit-row {
@@ -361,10 +319,9 @@ body {
 }
 
 .button-primary:hover:not(:disabled) {
-  border-color: transparent;
-  background: linear-gradient(135deg, #ff7a5c, var(--accent-strong) 50%, var(--accent));
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
   color: #ffffff;
-  box-shadow: 0 12px 32px rgba(232, 87, 58, 0.38);
 }
 
 .button-ghost {
@@ -374,10 +331,10 @@ body {
 
 .dialog-close {
   flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: var(--radius);
   font-size: 18px;
   line-height: 1;
   color: var(--text-muted);
@@ -782,9 +739,8 @@ body {
 }
 
 .gallery-item:hover {
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
-  transform: translateY(-2px);
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
+  border-color: var(--border-strong);
+  box-shadow: 0 8px 24px rgba(26, 26, 24, 0.08);
 }
 
 .gallery-item img {
@@ -792,12 +748,7 @@ body {
   width: 100%;
   aspect-ratio: 1;
   object-fit: contain;
-  background:
-    linear-gradient(45deg, rgba(255, 255, 255, 0.03) 25%, transparent 25%),
-    linear-gradient(-45deg, rgba(255, 255, 255, 0.03) 25%, transparent 25%),
-    var(--bg);
-  background-size: 16px 16px;
-  background-position: 0 0, 0 8px;
+  background: var(--bg);
 }
 
 .gallery-meta {
@@ -920,19 +871,20 @@ body {
   height: 28px;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
-  background: rgba(10, 11, 14, 0.78);
-  color: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
   font-size: 13px;
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 2px 8px rgba(26, 26, 24, 0.08);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .icon-button:hover {
   background: var(--accent);
-  border-color: transparent;
+  border-color: var(--accent);
+  color: #ffffff;
 }
 
 .empty {
@@ -961,9 +913,9 @@ body {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: rgba(4, 5, 7, 0.72);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(26, 26, 24, 0.28);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   animation: backdrop-in 0.18s ease;
 }
 
@@ -981,12 +933,12 @@ body {
   max-width: 520px;
   max-height: 85vh;
   overflow-y: auto;
-  padding: 1.35rem 1.4rem 1.5rem;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-xl);
+  padding: 1.25rem 1.35rem 1.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-dialog);
-  animation: dialog-in 0.22s cubic-bezier(0.2, 0.9, 0.2, 1);
+  animation: dialog-in 0.18s ease;
 }
 
 @keyframes dialog-in {
@@ -1088,15 +1040,45 @@ body {
 }
 
 .toast {
-  padding: 0.7rem 1rem;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  padding: 0.65rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
   font-size: 13px;
   box-shadow: var(--shadow-dialog);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  animation: dialog-in 0.2s ease;
+  animation: dialog-in 0.18s ease;
+}
+
+/* 分段控件（并发等小集合选项，功能外露） */
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.35rem;
+}
+
+.segmented-btn {
+  padding: 0.55rem 0.4rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.segmented-btn:hover:not(:disabled) {
+  border-color: var(--text-subtle);
+  color: var(--text);
+}
+
+.segmented-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
 }
 
 .toast-success {
@@ -1347,9 +1329,9 @@ body {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: rgba(4, 5, 7, 0.78);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(26, 26, 24, 0.35);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .mask-fullscreen {

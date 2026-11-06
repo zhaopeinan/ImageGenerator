@@ -10,7 +10,6 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import ChannelsDialog from './components/ChannelsDialog.vue'
 import MaskPanel from './components/MaskPanel.vue'
-import SelectBox from './components/SelectBox.vue'
 import SettingsDialog from './components/SettingsDialog.vue'
 import UploadZone from './components/UploadZone.vue'
 import { toPngBlob, useEditorStore } from './composables/useEditorStore'
@@ -552,37 +551,6 @@ const FORMAT_OPTIONS: { value: OutputFormat; label: string }[] = [
  */
 const modelOptions = computed(() => usableModels(store.activeTab, store.channelModelIds))
 
-/** SelectBox 的选项格式：模型名做主标签，说明做右侧附注 */
-const modelSelectOptions = computed(() =>
-  modelOptions.value.map((m) => ({
-    value: m.id,
-    label: m.id,
-    hint: m.note,
-  })),
-)
-
-const channelOptions = computed(() =>
-  store.usableChannels.map((c) => ({ value: c.id, label: c.name })),
-)
-
-/**
- * 质量选项。
- *
- * 渠道不透传 quality 时去掉 `N×` 标记 —— 那个倍数是 woyao 实测来的，
- * 拿到 TokenLab 上展示会让人以为能省能多花，实际三档完全一样。
- */
-const qualityOptions = computed(() =>
-  QUALITY_OPTIONS.map((q) => ({
-    value: q.value,
-    label: q.label,
-    hint: qualitySupported.value ? `${q.tokens}×` : '',
-  })),
-)
-
-const formatOptions = computed(() =>
-  FORMAT_OPTIONS.map((f) => ({ value: f.value, label: f.label })),
-)
-
 /** 探测是否正在进行 —— 用于在模型旁提示 */
 const isProbingModels = computed(() => store.modelsProbing)
 
@@ -633,6 +601,11 @@ const qualitySupported = computed(() => {
   // null / undefined = 未验证，保守放行
   return flag !== false
 })
+
+/** 质量选项文案；不透传时去掉 N×，避免 TokenLab 误导 */
+function formatQualityLabel(q: (typeof QUALITY_OPTIONS)[number]): string {
+  return qualitySupported.value ? `${q.label}（${q.tokens}×）` : q.label
+}
 
 /** 单张参考单价 */
 const perImageCost = computed(() => {
@@ -712,13 +685,20 @@ watch(
             class="label"
             for="channel"
           >渠道</label>
-          <SelectBox
+          <select
             id="channel"
             v-if="store.usableChannels.length > 0"
             v-model="store.selectedChannelId"
-            :options="channelOptions"
-            placeholder="选择渠道"
-          />
+            class="select"
+          >
+            <option
+              v-for="c in store.usableChannels"
+              :key="c.id"
+              :value="c.id"
+            >
+              {{ c.name }}
+            </option>
+          </select>
           <div
             v-else
             class="notice notice-warn"
@@ -823,12 +803,20 @@ watch(
               class="label"
               for="quality"
             >质量</label>
-            <SelectBox
+            <select
               id="quality"
               v-model="store.quality"
-              :options="qualityOptions"
+              class="select"
               :disabled="!qualitySupported"
-            />
+            >
+              <option
+                v-for="q in QUALITY_OPTIONS"
+                :key="q.value"
+                :value="q.value"
+              >
+                {{ formatQualityLabel(q) }}
+              </option>
+            </select>
             <p
               v-if="!qualitySupported"
               class="hint hint-warn"
@@ -845,13 +833,27 @@ watch(
               模型
               <span class="hint" style="display: inline; margin-left: 0.5rem">子渠道</span>
             </label>
-            <SelectBox
+            <select
               id="model"
               v-model="store.model"
-              :options="modelSelectOptions"
-              placeholder="选择模型"
-              empty-text="该渠道未提供图像模型"
-            />
+              class="select"
+              :disabled="modelOptions.length === 0"
+            >
+              <option
+                v-if="modelOptions.length === 0"
+                value=""
+                disabled
+              >
+                该渠道未提供图像模型
+              </option>
+              <option
+                v-for="m in modelOptions"
+                :key="m.id"
+                :value="m.id"
+              >
+                {{ m.note ? `${m.id} — ${m.note}` : m.id }}
+              </option>
+            </select>
             <p
               v-if="isProbingModels"
               class="hint"
@@ -956,11 +958,19 @@ watch(
                 class="label"
                 for="format"
               >输出格式</label>
-              <SelectBox
+              <select
                 id="format"
                 v-model="store.format"
-                :options="formatOptions"
-              />
+                class="select"
+              >
+                <option
+                  v-for="f in FORMAT_OPTIONS"
+                  :key="f.value"
+                  :value="f.value"
+                >
+                  {{ f.label }}
+                </option>
+              </select>
             </div>
           </div>
 
