@@ -56,7 +56,15 @@ export const channelsApi = {
 
   update(
     id: string,
-    input: { name?: string; endpoint?: string; apiKey?: string; note?: string; enabled?: boolean },
+    input: {
+      name?: string
+      endpoint?: string
+      apiKey?: string
+      note?: string
+      enabled?: boolean
+      sizeViaPrompt?: boolean | null
+      qualityPassthrough?: boolean | null
+    },
   ): Promise<{ channel: Channel }> {
     return request(`/api/channels/${id}`, { method: 'PUT', body: JSON.stringify(input) })
   },

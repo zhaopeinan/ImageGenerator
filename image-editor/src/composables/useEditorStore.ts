@@ -152,6 +152,16 @@ export const useEditorStore = defineStore('editor', () => {
   /** 批量进度：已完成张数 / 计划张数 */
   const batchDone = ref(0)
   const batchTotal = ref(0)
+  /** 批量默认并发；可在设置里改（1–4） */
+  const BATCH_CONCURRENCY_STORE = 'image-editor:batch-concurrency'
+  const batchConcurrency = ref(
+    Math.min(4, Math.max(1, Number(lsGet(BATCH_CONCURRENCY_STORE) || 2) || 2)),
+  )
+  watch(batchConcurrency, (n) => {
+    const v = Math.min(4, Math.max(1, Number(n) || 2))
+    if (v !== n) batchConcurrency.value = v
+    else lsSet(BATCH_CONCURRENCY_STORE, String(v))
+  })
   const jobAbortController = ref<AbortController | null>(null)
 
   const hasActiveJob = computed(() => submitting.value || submittingKind.value !== null)
@@ -767,13 +777,16 @@ export const useEditorStore = defineStore('editor', () => {
     return enqueueGallery(async () => {
       if (!contextValid(currentEpoch, currentRevision)) return { persisted: false }
 
+      // HTTP(S) URL 先拉成本地 data URL，否则 IndexedDB 只认 data:，刷新后丢图
+      const localUrls = await Promise.all(urls.map((src) => ensureLocalImageSrc(src)))
+
       const now = new Date().toISOString()
       // TokenLab 下 size 不生效，标成「按提示词」而不是编造一个请求尺寸，
       // 否则画廊里会出现一个从未真正传给上游的数字。
       const sizeLabel = sizeViaPrompt.value
         ? '按提示词'
         : computeSize(resolution.value, aspect.value) ?? 'auto'
-      const fresh: GalleryItem[] = urls.map((src, i) => ({
+      const fresh: GalleryItem[] = localUrls.map((src, i) => ({
         id: `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
         kind,
         src,
@@ -1001,7 +1014,15 @@ export const useEditorStore = defineStore('editor', () => {
 
   async function updateChannel(
     id: string,
-    input: { name?: string; endpoint?: string; apiKey?: string; note?: string; enabled?: boolean },
+    input: {
+      name?: string
+      endpoint?: string
+      apiKey?: string
+      note?: string
+      enabled?: boolean
+      sizeViaPrompt?: boolean | null
+      qualityPassthrough?: boolean | null
+    },
   ): Promise<Channel> {
     const { channel } = await channelsApi.update(id, input)
     await loadChannels()
@@ -1238,6 +1259,11 @@ async function probeChannelModels(channelId: string, force = false): Promise<voi
     const files = inputFiles.value
     if (files.length === 0) throw new Error('缺少源图片')
 
+    // 蒙版必须与主图同尺寸，否则上游可能白跑数分钟再报错
+    if (maskFile.value) {
+      await assertMaskMatchesSource(files[0], maskFile.value)
+    }
+
     const { prompt: finalPrompt, size } = resolvePromptAndSize(channelId)
 
     const form = new FormData()
@@ -1271,12 +1297,10 @@ async function probeChannelModels(channelId: string, force = false): Promise<voi
   }
 
   /**
-   * 并发 N 次请求实现「批量」。
+   * 并发受限的批量请求。
    *
-   * 注意：不是 n=N，而是 N 次 n=1 的独立请求，与原站语义一致。
-   * 每次拿到图立刻回调落库，用户能边看边出。
-   *
-   * 文生图与图生图共用这套调度，只有内层请求方式不同。
+   * 不是 n=N，而是 N 次 n=1；与原站一致。默认最多同时 2 路，
+   * 避免 count=4 时打满上游限流与费用尖刺。每次出图立刻回调落库。
    */
   async function runBatch(
     total: number,
@@ -1289,16 +1313,52 @@ async function probeChannelModels(channelId: string, force = false): Promise<voi
     batchDone.value = 0
 
     const send = kind === 'generate' ? requestGenerate : requestEdit
-    const results = await Promise.allSettled(
-      Array.from({ length: total }, async () => {
-        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-        const urls = await send(channelId, signal)
-        if (urls.length === 0) throw new Error('响应中不含图片')
-        await onImages(urls)
-        batchDone.value += 1
-        return urls
-      }),
+    const concurrency = Math.max(1, Math.min(batchConcurrency.value, total))
+    const results: PromiseSettledResult<string[]>[] = new Array(total)
+    let nextIndex = 0
+
+    async function worker() {
+      while (true) {
+        if (signal?.aborted) {
+          throw new DOMException('Aborted', 'AbortError')
+        }
+        const i = nextIndex
+        nextIndex += 1
+        if (i >= total) return
+        try {
+          const urls = await send(channelId, signal)
+          if (urls.length === 0) throw new Error('响应中不含图片')
+          await onImages(urls)
+          batchDone.value += 1
+          results[i] = { status: 'fulfilled', value: urls }
+        } catch (reason) {
+          results[i] = { status: 'rejected', reason }
+          // 硬失败时不再派新任务；已在途的仍跑完
+          nextIndex = total
+          throw reason
+        }
+      }
+    }
+
+    const workers = Array.from({ length: concurrency }, () =>
+      worker().then(
+        () => undefined,
+        () => undefined,
+      ),
     )
+    await Promise.all(workers)
+
+    // 未开跑就被拦下的槽位标为 abort / 中止
+    for (let i = 0; i < total; i++) {
+      if (!results[i]) {
+        results[i] = {
+          status: 'rejected',
+          reason: signal?.aborted
+            ? new DOMException('Aborted', 'AbortError')
+            : new Error('任务未执行'),
+        }
+      }
+    }
 
     const aborted = results.some(
       (r) => r.status === 'rejected' && isAbortError(r.reason),
@@ -1346,6 +1406,7 @@ async function probeChannelModels(channelId: string, force = false): Promise<voi
     submittingStartedAt,
     batchDone,
     batchTotal,
+    batchConcurrency,
     // getters
     selectedChannel,
     sizeViaPrompt,
@@ -1394,6 +1455,43 @@ function imageFingerprint(src: string): string {
   const payload = src.startsWith('data:') ? src.slice(src.indexOf(',') + 1) : src
   if (payload.length <= 128) return payload
   return `${payload.length}:${payload.slice(0, 64)}:${payload.slice(-64)}`
+}
+
+/** 读取图片像素尺寸（File / Blob / data URL / http URL） */
+function readImageSize(source: Blob | string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = typeof source === 'string' ? source : URL.createObjectURL(source)
+    const img = new Image()
+    img.onload = () => {
+      if (typeof source !== 'string') URL.revokeObjectURL(url)
+      resolve({ width: img.naturalWidth, height: img.naturalHeight })
+    }
+    img.onerror = () => {
+      if (typeof source !== 'string') URL.revokeObjectURL(url)
+      reject(new Error('无法读取图片尺寸'))
+    }
+    img.src = url
+  })
+}
+
+async function assertMaskMatchesSource(source: File, mask: File): Promise<void> {
+  const [a, b] = await Promise.all([readImageSize(source), readImageSize(mask)])
+  if (a.width !== b.width || a.height !== b.height) {
+    throw new Error(
+      `蒙版尺寸（${b.width}×${b.height}）与主图（${a.width}×${a.height}）不一致，请重新绘制或上传同尺寸蒙版`,
+    )
+  }
+}
+
+/** 把远程 URL 拉成 data URL，便于 IndexedDB 持久化 */
+async function ensureLocalImageSrc(src: string): Promise<string> {
+  if (!src) return src
+  if (src.startsWith('data:')) return src
+  if (!/^https?:\/\//i.test(src)) return src
+  const response = await fetch(src)
+  if (!response.ok) throw new Error(`下载结果图失败：HTTP ${response.status}`)
+  const blob = await response.blob()
+  return fileToDataUrl(new File([blob], 'remote.png', { type: blob.type || 'image/png' }))
 }
 
 /**

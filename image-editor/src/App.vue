@@ -174,8 +174,8 @@ async function submit() {
       })
       notify(`${kind === 'generate' ? '生成' : '编辑'}完成，已产出 ${total} 张`)
     } catch (err) {
+      const done = store.batchDone
       if (isAbortError(err)) {
-        const done = store.batchDone
         notify(
           done > 0
             ? `已取消，保留已完成的 ${done} 张`
@@ -183,7 +183,13 @@ async function submit() {
         )
         return
       }
-      notify(describeError(err), 'error')
+      const base = describeError(err)
+      notify(
+        done > 0
+          ? `${base}（已保留完成的 ${done}/${total} 张）`
+          : base,
+        'error',
+      )
       suggestAlternateChannel(err)
     }
   })
@@ -210,8 +216,10 @@ function describeError(err: unknown): string {
   }
   if (isNetworkError(err)) return '网络请求失败，请检查网络或换渠道'
   if (text.includes('缺少源图片')) return '请先上传待编辑的图片'
+  if (text.includes('蒙版尺寸')) return text
   if (text.includes('响应中不含图片')) return '响应中不含图片'
   if (text.includes('返回图片数量不足')) return '返回图片数量不足'
+  if (text.includes('客户端已取消')) return '已取消'
   return text || '请求失败'
 }
 
@@ -254,7 +262,15 @@ async function createChannel(input: { name: string; endpoint: string; apiKey: st
 
 async function updateChannel(
   id: string,
-  input: { name?: string; endpoint?: string; apiKey?: string; note?: string; enabled?: boolean },
+  input: {
+    name?: string
+    endpoint?: string
+    apiKey?: string
+    note?: string
+    enabled?: boolean
+    sizeViaPrompt?: boolean | null
+    qualityPassthrough?: boolean | null
+  },
 ) {
   await store.updateChannel(id, input)
   notify('渠道已更新')

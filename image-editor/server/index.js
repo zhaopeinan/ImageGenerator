@@ -11,7 +11,8 @@
  */
 
 import http from 'node:http'
-import { createReadStream } from 'node:fs'
+import { createReadStream, mkdirSync, writeFileSync, unlinkSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { stat } from 'node:fs/promises'
 import { extname, join, normalize, dirname } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -471,10 +472,6 @@ async function forwardWithPathFallback(channel, resourcePath, options) {
 }
 
 /**
- * 向渠道发起请求。
- * body 传入时直接发送。
- */
-/**
  * 超时阈值。
  *
  * 实测耗时随分辨率显著增长（woyao，quality=low）：
@@ -485,8 +482,38 @@ async function forwardWithPathFallback(channel, resourcePath, options) {
  */
 const UPSTREAM_TIMEOUT_MS = 300_000
 
-function forwardRequest(channel, { path, method, headers, body, timeout = UPSTREAM_TIMEOUT_MS }) {
+/**
+ * 客户端断开时 abort 上游（取消按钮 / Esc / 关页）。
+ * 仅在响应尚未写完时触发，避免正常结束后误杀。
+ */
+function bindClientAbort(req, res) {
+  const ac = new AbortController()
+  const onClose = () => {
+    if (!res.writableEnded) ac.abort()
+  }
+  req.on('close', onClose)
+  return {
+    signal: ac.signal,
+    dispose() {
+      req.off('close', onClose)
+    },
+  }
+}
+
+function isAbortLike(err) {
+  if (!err) return false
+  if (err.name === 'AbortError') return true
+  const msg = String(err.message || err)
+  return /aborted|客户端已取消|The operation was aborted/i.test(msg)
+}
+
+function forwardRequest(channel, { path, method, headers, body, timeout = UPSTREAM_TIMEOUT_MS, signal }) {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new Error('客户端已取消'))
+      return
+    }
+
     let target
     try {
       target = new URL(`${channel.endpoint}${path}`)
@@ -517,24 +544,80 @@ function forwardRequest(channel, { path, method, headers, body, timeout = UPSTRE
         const chunks = []
         upstreamRes.on('data', (c) => chunks.push(c))
         upstreamRes.on('end', () => {
+          cleanup()
           resolve({
             status: upstreamRes.statusCode ?? 502,
             headers: upstreamRes.headers,
             body: Buffer.concat(chunks),
           })
         })
-        upstreamRes.on('error', reject)
+        upstreamRes.on('error', (err) => {
+          cleanup()
+          reject(err)
+        })
       },
     )
 
+    const onAbort = () => {
+      req.destroy(new Error('客户端已取消'))
+    }
+
+    const cleanup = () => {
+      if (signal) signal.removeEventListener('abort', onAbort)
+    }
+
+    if (signal) signal.addEventListener('abort', onAbort, { once: true })
+
     req.on('timeout', () => {
+      cleanup()
       req.destroy(new Error('上游响应超时'))
     })
-    req.on('error', reject)
+    req.on('error', (err) => {
+      cleanup()
+      reject(err)
+    })
 
     if (body) req.write(body)
     req.end()
   })
+}
+
+/** 供 PhotoCraft 桥 / 外部工具发现当前监听地址（含 Electron 动态端口） */
+function runtimeFilePath() {
+  return join(homedir(), '.shenbi', 'runtime.json')
+}
+
+function writeRuntimeEndpoint(host, port) {
+  try {
+    const dir = join(homedir(), '.shenbi')
+    mkdirSync(dir, { recursive: true })
+    const bindHost = host === '0.0.0.0' ? '127.0.0.1' : host
+    writeFileSync(
+      runtimeFilePath(),
+      JSON.stringify(
+        {
+          base: `http://${bindHost}:${port}`,
+          host: bindHost,
+          port,
+          pid: process.pid,
+          updatedAt: new Date().toISOString(),
+        },
+        null,
+        2,
+      ),
+      'utf8',
+    )
+  } catch (err) {
+    console.warn('[server] 写入 runtime.json 失败：', err?.message ?? err)
+  }
+}
+
+function clearRuntimeEndpoint() {
+  try {
+    unlinkSync(runtimeFilePath())
+  } catch {
+    // ignore
+  }
 }
 
 /**
@@ -572,10 +655,12 @@ async function handleGenerateProxy(req, res) {
   const channel = await resolveChannel(req, res)
   if (!channel) return
 
+  const abort = bindClientAbort(req, res)
   let body
   try {
     body = await readBodyBuffer(req, 2 * 1024 * 1024)
   } catch (err) {
+    abort.dispose()
     sendError(res, 413, err.message)
     return
   }
@@ -589,13 +674,20 @@ async function handleGenerateProxy(req, res) {
         'Content-Length': String(body.length),
       },
       body,
+      signal: abort.signal,
     })
   } catch (err) {
+    abort.dispose()
+    if (isAbortLike(err) || abort.signal.aborted) {
+      if (!res.headersSent) sendError(res, 499, '客户端已取消')
+      return
+    }
     // 连接失败/超时必须回传给前端，否则页面会一直转圈且没有任何提示
     sendError(res, 502, describeUpstreamError(err))
     return
   }
 
+  abort.dispose()
   if (!payload) return
   res.writeHead(payload.status, {
     'Content-Type': payload.headers['content-type'] ?? 'application/json; charset=utf-8',
@@ -621,6 +713,8 @@ async function handleEditsProxy(req, res) {
     return
   }
 
+  const abort = bindClientAbort(req, res)
+
   // 缓冲请求体而非流式转发。
   // 代价：图片在内存里多存一份（上限 100MB，单张图通常几 MB）。
   // 收益：/v1 路径 404 时可以原样重试 /images/edits，
@@ -629,6 +723,7 @@ async function handleEditsProxy(req, res) {
   try {
     bodyBuffer = await readBodyBuffer(req, 100 * 1024 * 1024)
   } catch (err) {
+    abort.dispose()
     sendError(res, 413, err.message)
     return
   }
@@ -644,13 +739,20 @@ async function handleEditsProxy(req, res) {
         'Content-Length': String(bodyBuffer.length),
       },
       body: bodyBuffer,
+      signal: abort.signal,
     })
   } catch (err) {
+    abort.dispose()
+    if (isAbortLike(err) || abort.signal.aborted) {
+      if (!res.headersSent) sendError(res, 499, '客户端已取消')
+      return
+    }
     // 连接失败/超时必须回传给前端，否则页面会一直转圈且没有任何提示
     sendError(res, 502, describeUpstreamError(err))
     return
   }
 
+  abort.dispose()
   if (!payload) return
   res.writeHead(payload.status, {
     'Content-Type': payload.headers['content-type'] ?? 'application/json; charset=utf-8',
@@ -770,8 +872,10 @@ export function startServer(options = {}) {
     }
     const onListening = () => {
       server.off('error', onError)
+      writeRuntimeEndpoint(host, port)
       console.log(`[server] http://${host}:${port}`)
       console.log(`[server] 渠道数据：${process.env.SHENBI_DATA_DIR ?? 'server/data/channels.json'}`)
+      console.log(`[server] 运行时发现文件：${runtimeFilePath()}`)
       if (!ACCESS_TOKEN) {
         console.log(`[server] 未设置 ACCESS_TOKEN（仅本机可访问时这是安全的）`)
       } else {
@@ -789,6 +893,16 @@ export function startServer(options = {}) {
     server.listen(port, host)
   })
 }
+
+process.once('exit', clearRuntimeEndpoint)
+process.once('SIGINT', () => {
+  clearRuntimeEndpoint()
+  process.exit(0)
+})
+process.once('SIGTERM', () => {
+  clearRuntimeEndpoint()
+  process.exit(0)
+})
 
 export { server, PORT, HOST }
 

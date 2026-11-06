@@ -10,6 +10,7 @@ Thumbs.db
 .aris/
 .workbuddy/
 .cursor/
+.shenbi/
 
 # Secrets & credentials
 .env

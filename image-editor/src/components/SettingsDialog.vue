@@ -1,13 +1,15 @@
 <script setup lang="ts">
 /**
- * 设置：数据目录（Electron）。
+ * 设置：数据目录（Electron）+ 批量并发。
  * 换电脑时把整个数据目录拷走，再在新机器上选中即可还原渠道与画廊。
  */
 import { computed, ref, watch } from 'vue'
+import { useEditorStore } from '../composables/useEditorStore'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
+const store = useEditorStore()
 const isElectron = computed(() => Boolean(window.shenbi?.isElectron))
 
 const dataRoot = ref('')
@@ -181,6 +183,27 @@ async function openFolder() {
             （渠道）与浏览器本地存储（画廊）。请使用桌面版「神笔」以自定义数据目录。
           </p>
         </template>
+      </section>
+
+      <section class="settings-section">
+        <h4>批量并发</h4>
+        <p class="settings-hint">
+          一次生成多张时，最多同时向上游发出几路请求。调低可减轻限流与费用尖刺；调高可更快出齐。
+        </p>
+        <div class="settings-actions" style="align-items: center">
+          <label class="settings-path-label" for="batch-concurrency">同时请求数</label>
+          <select
+            id="batch-concurrency"
+            v-model.number="store.batchConcurrency"
+            class="input"
+            style="width: auto; min-width: 5rem"
+          >
+            <option :value="1">1（串行）</option>
+            <option :value="2">2（推荐）</option>
+            <option :value="3">3</option>
+            <option :value="4">4</option>
+          </select>
+        </div>
       </section>
     </div>
   </div>

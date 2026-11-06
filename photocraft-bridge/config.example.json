@@ -4,6 +4,7 @@
   "bridge_dir": "./.exchange",
   "image_editor_base": "http://127.0.0.1:5179",
   "image_editor_dir": "../image-editor",
+  "_comment_image_editor_base": "桌面「神笔」会写入 ~/.shenbi/runtime.json（动态端口）；桥接优先用该地址，健康检查失败再回退本字段",
   "channelId": null,
   "model": "gpt-image-2",
   "size": "1024x1024",

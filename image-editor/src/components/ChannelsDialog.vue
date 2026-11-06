@@ -18,13 +18,28 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'create', input: { name: string; endpoint: string; apiKey: string; note?: string }): Promise<void>
-  (e: 'update', id: string, input: { name?: string; endpoint?: string; apiKey?: string; note?: string; enabled?: boolean }): Promise<void>
+  (
+    e: 'update',
+    id: string,
+    input: {
+      name?: string
+      endpoint?: string
+      apiKey?: string
+      note?: string
+      enabled?: boolean
+      sizeViaPrompt?: boolean | null
+      qualityPassthrough?: boolean | null
+    },
+  ): Promise<void>
   (e: 'remove', id: string): Promise<void>
   (e: 'test', id: string): Promise<void>
   (e: 'probe', id: string): Promise<void>
   (e: 'unblock', id: string, model: string): Promise<void>
   (e: 'refresh'): Promise<void>
 }>()
+
+/** 三态：未验证 / 是 / 否 */
+type TriFlag = 'unknown' | 'yes' | 'no'
 
 interface Draft {
   id: string | null
@@ -34,6 +49,20 @@ interface Draft {
   note: string
   enabled: boolean
   isNew: boolean
+  sizeViaPrompt: TriFlag
+  qualityPassthrough: TriFlag
+}
+
+function triFrom(value: boolean | null | undefined): TriFlag {
+  if (value === true) return 'yes'
+  if (value === false) return 'no'
+  return 'unknown'
+}
+
+function triTo(value: TriFlag): boolean | null {
+  if (value === 'yes') return true
+  if (value === 'no') return false
+  return null
 }
 
 const draft = ref<Draft | null>(null)
@@ -99,6 +128,8 @@ function startCreate() {
     note: '',
     enabled: true,
     isNew: true,
+    sizeViaPrompt: 'unknown',
+    qualityPassthrough: 'unknown',
   }
 }
 
@@ -112,6 +143,8 @@ function startEdit(channel: Channel) {
     note: channel.note,
     enabled: channel.enabled,
     isNew: false,
+    sizeViaPrompt: triFrom(channel.sizeViaPrompt),
+    qualityPassthrough: triFrom(channel.qualityPassthrough),
   }
 }
 
@@ -139,6 +172,8 @@ async function save() {
         endpoint: d.endpoint.trim(),
         note: d.note.trim(),
         enabled: d.enabled,
+        sizeViaPrompt: triTo(d.sizeViaPrompt),
+        qualityPassthrough: triTo(d.qualityPassthrough),
       }
       // 留空表示不修改已有 Key
       if (d.apiKey.trim()) payload.apiKey = d.apiKey.trim()
@@ -282,6 +317,35 @@ async function remove(channel: Channel) {
         </label>
 
         <div
+          v-if="!draft.isNew"
+          class="grid-2"
+          style="margin-bottom: 0.75rem"
+        >
+          <div>
+            <label class="label">尺寸走提示词</label>
+            <select v-model="draft.sizeViaPrompt" class="input">
+              <option value="unknown">未验证（按 size 参数）</option>
+              <option value="yes">是（TokenLab 类，size 无效）</option>
+              <option value="no">否（woyao 类，走 size）</option>
+            </select>
+            <p class="hint" style="margin: 0.25rem 0 0">
+              选错会导致比例无效。TokenLab 实测为「是」。
+            </p>
+          </div>
+          <div>
+            <label class="label">质量参数透传</label>
+            <select v-model="draft.qualityPassthrough" class="input">
+              <option value="unknown">未验证（允许选择）</option>
+              <option value="yes">是（low/medium/high 生效）</option>
+              <option value="no">否（改质量无差别）</option>
+            </select>
+            <p class="hint" style="margin: 0.25rem 0 0">
+              为「否」时主界面会提示质量可能无效。
+            </p>
+          </div>
+        </div>
+
+        <div
           v-if="formError"
           class="notice notice-danger"
           style="margin-bottom: 0.75rem"
@@ -365,6 +429,18 @@ async function remove(channel: Channel) {
             class="hint"
           >
             {{ c.note }}
+          </div>
+          <div class="hint" style="margin-top: 0.25rem">
+            尺寸：{{
+              c.sizeViaPrompt === true ? '走提示词' : c.sizeViaPrompt === false ? '走 size' : '未验证'
+            }}
+            · 质量：{{
+              c.qualityPassthrough === true
+                ? '透传'
+                : c.qualityPassthrough === false
+                  ? '不透传'
+                  : '未验证'
+            }}
           </div>
           <div
             v-if="testResults[c.id]"
