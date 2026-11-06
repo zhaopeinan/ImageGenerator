@@ -144,7 +144,7 @@ function createWindow(base) {
     minHeight: 640,
     title: '神笔',
     show: false,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#070809',
     webPreferences: {
       preload,
       contextIsolation: true,

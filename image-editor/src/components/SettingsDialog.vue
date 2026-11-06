@@ -93,14 +93,15 @@ async function openFolder() {
       role="dialog"
       aria-labelledby="settings-title"
     >
-      <div class="settings-head">
+      <div class="dialog-head settings-head">
         <h3 id="settings-title">设置</h3>
         <button
           type="button"
-          class="button button-ghost"
+          class="button dialog-close"
+          aria-label="关闭"
           @click="emit('close')"
         >
-          关闭
+          ×
         </button>
       </div>
 

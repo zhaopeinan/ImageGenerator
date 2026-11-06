@@ -220,6 +220,16 @@ onBeforeUnmount(() => {
           >
             清空
           </button>
+
+          <button
+            type="button"
+            class="button dialog-close"
+            aria-label="关闭"
+            title="Esc 取消"
+            @click="emit('cancel')"
+          >
+            ×
+          </button>
         </div>
       </header>
 

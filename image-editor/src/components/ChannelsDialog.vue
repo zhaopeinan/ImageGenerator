@@ -219,18 +219,34 @@ async function remove(channel: Channel) {
     class="dialog-backdrop"
     @click.self="emit('close')"
   >
-    <div class="dialog" style="max-width: 640px">
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem">
-        <h3 style="margin: 0">
+    <div
+      class="dialog"
+      style="max-width: 640px"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="channels-title"
+    >
+      <div class="dialog-head">
+        <h3 id="channels-title">
           渠道管理
         </h3>
-        <button
-          type="button"
-          class="button button-sm"
-          @click="emit('refresh')"
-        >
-          刷新
-        </button>
+        <div class="dialog-head-actions">
+          <button
+            type="button"
+            class="button button-sm"
+            @click="emit('refresh')"
+          >
+            刷新
+          </button>
+          <button
+            type="button"
+            class="button dialog-close"
+            aria-label="关闭"
+            @click="emit('close')"
+          >
+            ×
+          </button>
+        </div>
       </div>
 
       <p class="hint" style="margin: 0 0 1rem">

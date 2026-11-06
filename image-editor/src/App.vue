@@ -451,6 +451,22 @@ function onBeforeUnload(event: BeforeUnloadEvent) {
 
 function onKeyDown(event: KeyboardEvent) {
   if (event.key !== 'Escape') return
+  // 弹层优先关闭，再取消生成
+  if (confirmState.value) {
+    confirmState.value = null
+    event.preventDefault()
+    return
+  }
+  if (channelsOpen.value) {
+    channelsOpen.value = false
+    event.preventDefault()
+    return
+  }
+  if (settingsOpen.value) {
+    settingsOpen.value = false
+    event.preventDefault()
+    return
+  }
   if (!store.hasActiveJob) return
   event.preventDefault()
   cancelSubmit()
@@ -646,19 +662,30 @@ watch(
 <template>
   <div class="app">
     <header class="app-header">
-      <div>
-        <h1 class="app-title">神笔</h1>
-        <p class="app-subtitle">
-          文生图走 images/generations，图生图走 images/edits，均为 OpenAI 兼容接口
-        </p>
+      <div class="app-brand">
+        <img
+          class="app-mark"
+          src="/favicon-32.png"
+          width="40"
+          height="40"
+          alt=""
+        >
+        <div>
+          <h1 class="app-title">
+            神笔<em>SHENBI</em>
+          </h1>
+          <p class="app-subtitle">
+            本地优先 · 文生图 / 图生图 / 局部精修
+          </p>
+        </div>
       </div>
-      <div style="display: flex; gap: 0.5rem">
+      <div class="app-header-actions">
         <button
           type="button"
           class="button"
           @click="channelsOpen = true"
         >
-          渠道管理
+          渠道
         </button>
         <button
           type="button"
@@ -672,7 +699,7 @@ watch(
           class="button button-ghost button-danger"
           @click="wipeAll"
         >
-          清空本地数据
+          清空数据
         </button>
       </div>
     </header>
@@ -1183,8 +1210,20 @@ watch(
       <div
         class="dialog"
         style="max-width: 400px"
+        role="dialog"
+        aria-modal="true"
       >
-        <h3>{{ confirmState.kind === 'clear' ? '清空画廊' : '删除这张图片？' }}</h3>
+        <div class="dialog-head">
+          <h3>{{ confirmState.kind === 'clear' ? '清空画廊' : '删除这张图片？' }}</h3>
+          <button
+            type="button"
+            class="button dialog-close"
+            aria-label="关闭"
+            @click="confirmState = null"
+          >
+            ×
+          </button>
+        </div>
         <p style="margin: 0; font-size: 13px; color: var(--text-muted)">
           {{
             confirmState.kind === 'clear'
