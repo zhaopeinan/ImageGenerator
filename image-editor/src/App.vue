@@ -675,19 +675,26 @@ watch(
   <div class="app">
     <header class="app-header">
       <div class="app-brand">
-        <img
-          class="app-mark"
-          src="/favicon-32.png"
-          width="40"
-          height="40"
-          alt=""
-        >
-        <div>
-          <h1 class="app-title">
-            神笔<em>SHENBI</em>
-          </h1>
+        <div class="app-mark-wrap" aria-hidden="true">
+          <img
+            class="app-mark"
+            src="/brand-mark.png"
+            width="48"
+            height="48"
+            alt=""
+          >
+        </div>
+        <div class="app-brand-text">
+          <div class="app-title-row">
+            <h1 class="app-title">神笔</h1>
+            <span class="app-wordmark">SHENBI</span>
+          </div>
           <p class="app-subtitle">
-            本地优先 · 文生图 / 图生图 / 局部精修
+            <span class="app-mode">文生图</span>
+            <span class="app-dot" aria-hidden="true" />
+            <span class="app-mode">图生图</span>
+            <span class="app-dot" aria-hidden="true" />
+            <span class="app-mode">局部精修</span>
           </p>
         </div>
       </div>
