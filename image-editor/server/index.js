@@ -484,18 +484,28 @@ const UPSTREAM_TIMEOUT_MS = 300_000
 
 /**
  * 客户端断开时 abort 上游（取消按钮 / Esc / 关页）。
- * 仅在响应尚未写完时触发，避免正常结束后误杀。
+ *
+ * 必须挂在 **res** 的 close 上，不能挂 req：
+ * Node 在请求体读完后也会立刻发 req `close`（complete=true），
+ * 若此时误 abort，文生图/图生图会在转发上游前就被标成「已取消」。
+ * res.close + !writableEnded 才表示客户端提前断开。
  */
 function bindClientAbort(req, res) {
   const ac = new AbortController()
   const onClose = () => {
     if (!res.writableEnded) ac.abort()
   }
-  req.on('close', onClose)
+  res.on('close', onClose)
+  // 兼容旧路径：部分环境仍会先发 req aborted
+  const onAborted = () => {
+    if (!res.writableEnded) ac.abort()
+  }
+  req.on('aborted', onAborted)
   return {
     signal: ac.signal,
     dispose() {
-      req.off('close', onClose)
+      res.off('close', onClose)
+      req.off('aborted', onAborted)
     },
   }
 }
