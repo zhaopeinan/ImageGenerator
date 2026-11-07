@@ -839,6 +839,29 @@ export const useEditorStore = defineStore('editor', () => {
     void persistDraft()
   }
 
+  /**
+   * 把画廊结果设为图生图主图：切到 edit、清空旧蒙版/参考图、写入源图。
+   * 便于「生成 → 再编辑 / 局部精修」无需复制粘贴。
+   */
+  async function useAsEditSource(item: GalleryItem): Promise<boolean> {
+    if (!item.src) return false
+    if (hasActiveJob.value) return false
+
+    activeTab.value = 'edit'
+    await clearUploadFile('mask')
+    await clearUploadFile('reference')
+
+    const file = await dataUrlOrUrlToFile(item.src, `gallery-${item.id}.${extFromSrc(item.src, item.format)}`)
+    const dataUrl = item.src.startsWith('data:') ? item.src : await fileToDataUrl(file)
+    const ok = await setUploadFile('source', file, dataUrl)
+    if (!ok) return false
+
+    // 带上原提示词方便继续改；不强制改模型/渠道，避免打断当前线路选择
+    if (item.prompt?.trim()) prompt.value = item.prompt.trim()
+    void persistDraft()
+    return true
+  }
+
   function deleteImage(id: string): Promise<{ persisted: boolean }> {
     const currentEpoch = epoch
     const currentRevision = revision
@@ -1425,6 +1448,7 @@ async function probeChannelModels(channelId: string, force = false): Promise<voi
     clearUploadFile,
     addGalleryItems,
     applyFromGallery,
+    useAsEditSource,
     deleteImage,
     clearGallery,
     clearLocalData,
@@ -1492,6 +1516,22 @@ async function ensureLocalImageSrc(src: string): Promise<string> {
   if (!response.ok) throw new Error(`下载结果图失败：HTTP ${response.status}`)
   const blob = await response.blob()
   return fileToDataUrl(new File([blob], 'remote.png', { type: blob.type || 'image/png' }))
+}
+
+function extFromSrc(src: string, fallback: OutputFormat = 'png'): string {
+  if (fallback === 'jpeg') return 'jpg'
+  if (fallback === 'webp') return 'webp'
+  if (src.startsWith('data:image/jpeg')) return 'jpg'
+  if (src.startsWith('data:image/webp')) return 'webp'
+  return 'png'
+}
+
+async function dataUrlOrUrlToFile(src: string, filename: string): Promise<File> {
+  const response = await fetch(src)
+  if (!response.ok) throw new Error(`读取图片失败：HTTP ${response.status}`)
+  const blob = await response.blob()
+  const type = blob.type || 'image/png'
+  return new File([blob], filename, { type })
 }
 
 /**

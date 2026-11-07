@@ -418,6 +418,25 @@ function refillFromGallery(item: GalleryItem) {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+/** 把画廊图设为图生图主图，可继续整图编辑或画蒙版局部精修 */
+async function useAsEditSource(item: GalleryItem) {
+  if (store.hasActiveJob) {
+    notify('请先等待或取消当前任务', 'error')
+    return
+  }
+  try {
+    const ok = await store.useAsEditSource(item)
+    if (!ok) {
+      notify('带入图生图失败', 'error')
+      return
+    }
+    notify('已带到图生图，可直接编辑或绘制遮罩')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  } catch (err) {
+    notify(err instanceof Error ? err.message : '带入图生图失败', 'error')
+  }
+}
+
 function requestClear() {
   if (store.galleryItems.length === 0) return
   confirmState.value = { kind: 'clear' }
@@ -1068,6 +1087,14 @@ watch(
               <button
                 type="button"
                 class="icon-button"
+                title="带到图生图"
+                @click="useAsEditSource(item)"
+              >
+                ⇢
+              </button>
+              <button
+                type="button"
+                class="icon-button"
                 title="回填提示词与参数"
                 @click="refillFromGallery(item)"
               >
@@ -1147,9 +1174,16 @@ watch(
                     <button
                       type="button"
                       class="button button-sm button-primary"
+                      @click="useAsEditSource(item)"
+                    >
+                      带到图生图
+                    </button>
+                    <button
+                      type="button"
+                      class="button button-sm"
                       @click="refillFromGallery(item)"
                     >
-                      回填到表单
+                      回填参数
                     </button>
                     <button
                       type="button"
