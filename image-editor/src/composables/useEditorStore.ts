@@ -1089,6 +1089,58 @@ async function unblockChannelModel(channelId: string, modelName: string): Promis
   await probeChannelModels(channelId, true)
 }
 
+/**
+ * 试用渠道尚未声明的模型（如 gpt-image-2.6）。
+ * 成功后写入渠道 extraModels，并刷新下拉、选中该模型。
+ */
+async function tryChannelModel(
+  channelId: string,
+  modelName: string,
+  opts: { force?: boolean } = {},
+): Promise<{ ok: boolean; message: string; model?: string; canForce?: boolean }> {
+  if (!channelId || !modelName.trim()) {
+    return { ok: false, message: '请填写模型名' }
+  }
+  try {
+    const result = await channelsApi.tryModel(channelId, {
+      model: modelName.trim(),
+      force: opts.force,
+    })
+    channels.value = channels.value.map((c) => (c.id === channelId ? result.channel : c))
+    channelModels.value = { ...channelModels.value, [channelId]: [] }
+    await probeChannelModels(channelId, true)
+    if (result.model) {
+      model.value = result.model
+      void persistDraft()
+    }
+    return { ok: true, message: result.message, model: result.model }
+  } catch (err) {
+    const canForce = Boolean(err && typeof err === 'object' && (err as { canForce?: boolean }).canForce)
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : '试用失败',
+      canForce,
+    }
+  }
+}
+
+async function removeChannelExtraModel(channelId: string, modelName: string): Promise<void> {
+  if (!channelId || !modelName) return
+  const { channel } = await channelsApi.removeExtraModel(channelId, modelName)
+  channels.value = channels.value.map((c) => (c.id === channelId ? channel : c))
+  channelModels.value = { ...channelModels.value, [channelId]: [] }
+  await probeChannelModels(channelId, true)
+  if (model.value === modelName) {
+    const next = (channelModels.value[channelId] ?? []).find(
+      (m) => m.available === true && m.model !== modelName,
+    )
+    if (next) {
+      model.value = next.model
+      void persistDraft()
+    }
+  }
+}
+
 async function probeChannelModels(channelId: string, force = false): Promise<void> {
     if (!channelId) return
     if (!force && channelModels.value[channelId]) return
@@ -1461,6 +1513,8 @@ async function probeChannelModels(channelId: string, force = false): Promise<voi
     ensureChannelSelected,
     probeChannelModels,
     unblockChannelModel,
+    tryChannelModel,
+    removeChannelExtraModel,
     createChannel,
     updateChannel,
     deleteChannel,

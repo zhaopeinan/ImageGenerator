@@ -28,8 +28,10 @@ import {
   listChannels,
   listModels,
   markModelUnavailable,
+  removeExtraModel,
   reorderChannels,
   toPublic,
+  tryExtraModel,
   updateChannel,
 } from './channels.js'
 
@@ -213,6 +215,38 @@ async function handleChannelsAPI(req, res, url) {
     } catch (err) {
       sendJSON(res, 200, { models: [], message: err.message })
     }
+    return true
+  }
+
+  // 试用新模型：POST /api/channels/:id/models/try
+  if (req.method === 'POST' && segments.length === 5 && segments[3] === 'models' && segments[4] === 'try') {
+    const body = await readJSONBody(req)
+    const result = await tryExtraModel(id, body.model, { force: Boolean(body.force) })
+    if (!result.ok) {
+      sendJSON(res, result.status ?? 400, {
+        error: { message: result.message },
+        canForce: result.canForce === true,
+        model: result.model,
+      })
+      return true
+    }
+    sendJSON(res, 200, result)
+    return true
+  }
+
+  // 移除手动试用模型：DELETE /api/channels/:id/models/extra?model=
+  if (req.method === 'DELETE' && segments.length === 5 && segments[3] === 'models' && segments[4] === 'extra') {
+    const model = decodeURIComponent(url.searchParams.get('model') ?? '')
+    if (!model) {
+      sendError(res, 400, '缺少模型名')
+      return true
+    }
+    const channel = await removeExtraModel(id, model)
+    if (!channel) {
+      sendError(res, 404, '渠道不存在')
+      return true
+    }
+    sendJSON(res, 200, { channel })
     return true
   }
 

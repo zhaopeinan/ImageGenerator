@@ -86,6 +86,13 @@ function makeChannel({ name, endpoint, apiKey, enabled = true, note = '' }) {
      * 由「测试」接口在真实请求失败时写入，用户也可手动标记。
      */
     unavailableModels: {},
+    /**
+     * 用户手动试用的模型（如上游新出的 gpt-image-2.6）。
+     *
+     * `/v1/models` 往往滞后；声明里没有时仍可通过「试用模型」加入下拉。
+     * 真正能否出图，再靠「测试」或直接生成验证。
+     */
+    extraModels: [],
   }
 }
 
@@ -279,10 +286,144 @@ export async function markModelUnavailable(id, model, reason) {
       reason: String(reason ?? '').slice(0, 300),
       at: new Date().toISOString(),
     }
+    // 既已实测不可用，就不要再留在手动试用列表里
+    if (Array.isArray(channel.extraModels)) {
+      channel.extraModels = channel.extraModels.filter((m) => m !== model)
+    }
   }
 
   await persist(data)
   return toPublic(channel)
+}
+
+function normalizeModelName(raw) {
+  return String(raw ?? '')
+    .trim()
+    .replace(/\s+/g, '')
+}
+
+function ensureExtraModels(channel) {
+  if (!Array.isArray(channel.extraModels)) channel.extraModels = []
+  return channel.extraModels
+}
+
+/**
+ * 试用一个尚未出现在渠道声明里的模型名。
+ *
+ * 流程：
+ *  1. 廉价探测（1×1 图 edits，明确 model_not_found 时亚秒失败、不计费）
+ *  2. 明确不支持且未 force → 拒绝加入
+ *  3. 否则写入 extraModels，并从黑名单移除（若有）
+ *
+ * @param force 即使廉价探测报未开通也加入（例如模型仅支持文生图，edits 会误报）
+ */
+export async function tryExtraModel(id, modelName, { force = false, timeout = 8_000 } = {}) {
+  const data = await load()
+  const channel = data.channels.find((c) => c.id === id)
+  if (!channel) return { ok: false, status: 404, message: '渠道不存在' }
+
+  const model = normalizeModelName(modelName)
+  if (!model) return { ok: false, status: 400, message: '模型名不能为空' }
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._:+-]{0,127}$/.test(model)) {
+    return { ok: false, status: 400, message: '模型名格式不合法' }
+  }
+  if (!hasUsableKey(channel)) {
+    return { ok: false, status: 400, message: '该渠道尚未填入有效 API Key' }
+  }
+
+  const extras = ensureExtraModels(channel)
+  const declared = await fetchDeclaredModels(channel)
+  if (declared?.includes(model) || extras.includes(model)) {
+    // 已在列表里：顺手清黑名单，方便直接选用
+    if (channel.unavailableModels?.[model]) {
+      delete channel.unavailableModels[model]
+      await persist(data)
+    }
+    return {
+      ok: true,
+      available: true,
+      model,
+      channel: toPublic(channel),
+      message: declared?.includes(model)
+        ? `「${model}」已在渠道声明列表中`
+        : `「${model}」已在试用列表中`,
+    }
+  }
+
+  const probeResult = await probeSingleModel(channel, model, timeout)
+  if (probeResult.available === false && !force) {
+    return {
+      ok: false,
+      available: false,
+      model,
+      status: 422,
+      message: `上游明确不支持「${model}」：${probeResult.reason || 'model_not_found'}。若它可能仅支持文生图，可强制加入后再测。`,
+      canForce: true,
+    }
+  }
+
+  extras.push(model)
+  if (!channel.unavailableModels || typeof channel.unavailableModels !== 'object') {
+    channel.unavailableModels = {}
+  }
+  delete channel.unavailableModels[model]
+  await persist(data)
+
+  const note =
+    probeResult.available === false
+      ? `已强制加入「${model}」（廉价探测报未开通，请用测试/生成验证）`
+      : probeResult.available === true
+        ? `已加入「${model}」，可在模型下拉中选择`
+        : `已加入「${model}」（上游未明确拒绝；真正出图请点测试或直接生成）`
+
+  return {
+    ok: true,
+    available: probeResult.available === false ? null : probeResult.available ?? null,
+    model,
+    channel: toPublic(channel),
+    message: note,
+  }
+}
+
+/** 从手动试用列表移除（不影响渠道声明） */
+export async function removeExtraModel(id, modelName) {
+  const data = await load()
+  const channel = data.channels.find((c) => c.id === id)
+  if (!channel) return null
+  const model = normalizeModelName(modelName)
+  const extras = ensureExtraModels(channel)
+  channel.extraModels = extras.filter((m) => m !== model)
+  await persist(data)
+  return toPublic(channel)
+}
+
+/** 对单个模型做廉价 edits 探测 */
+async function probeSingleModel(channel, model, timeout) {
+  const boundary = 'ieprobe'
+  const part = (name, value) =>
+    `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`
+  const imagePart =
+    `--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="p.png"\r\n` +
+    `Content-Type: image/png\r\n\r\n`
+  const body = Buffer.concat([
+    Buffer.from(`${part('model', model)}${part('prompt', 'probe')}`, 'utf8'),
+    Buffer.from(imagePart, 'utf8'),
+    PROBE_PNG,
+    Buffer.from(`\r\n--${boundary}--\r\n`, 'utf8'),
+  ])
+  try {
+    const res = await probe(channel, body, boundary, timeout)
+    const unsupported = /model_not_found|is not supported by any configured account|is not enabled for this channel/i.test(
+      res.text,
+    )
+    if (unsupported) {
+      return { available: false, reason: shortReason(res.text) }
+    }
+    return { available: null, reason: '' }
+  } catch (err) {
+    // 超时 ≈ 已通过路由、可能在推理 → 不下否定结论
+    return { available: null, reason: err.message }
+  }
 }
 
 export async function updateChannel(id, input) {
@@ -367,6 +508,9 @@ export async function listModels(channel, { timeout = 8_000 } = {}) {
    */
   const blocked = channel?.unavailableModels ?? {}
   const declared = allDeclared?.filter((m) => !(m in blocked)) ?? null
+  const extras = (Array.isArray(channel?.extraModels) ? channel.extraModels : [])
+    .map((m) => String(m).trim())
+    .filter((m) => m && !(m in blocked))
 
   // 第二步：内置兜底候选（渠道没给列表时，至少能探这些）
   const FALLBACK = [
@@ -377,13 +521,14 @@ export async function listModels(channel, { timeout = 8_000 } = {}) {
     'gpt-image-2.5',
     'gpt-image-2.5-flare',
     'gpt-image-2.5-sunburst',
+    'gpt-image-2.6',
   ]
 
   // 被实测屏蔽的模型一律不进候选，避免兜底路径把它"复活"
   const FALLBACK_OK = FALLBACK.filter((m) => !(m in blocked))
   const candidates = declared
-    ? [...new Set([...declared, ...FALLBACK_OK])]
-    : FALLBACK_OK
+    ? [...new Set([...declared, ...extras, ...FALLBACK_OK])]
+    : [...new Set([...extras, ...FALLBACK_OK])]
 
   const boundary = 'ieprobe'
   // boundary 值不含连字符；body 里的分隔符才加 `--`。两者必须一致。
@@ -395,9 +540,12 @@ export async function listModels(channel, { timeout = 8_000 } = {}) {
 
   const results = await Promise.all(
     candidates.map(async (model) => {
-      // 渠道已声明 → 直接采信，不再花时间探测
+      // 渠道已声明 / 用户手动试用 → 直接采信，不再花时间探测
       if (declared?.includes(model)) {
         return { model, available: true, reason: '渠道已声明' }
+      }
+      if (extras.includes(model)) {
+        return { model, available: true, reason: '手动试用' }
       }
       const body = Buffer.concat([
         Buffer.from(`${part('model', model)}${part('prompt', 'probe')}`, 'utf8'),
@@ -431,11 +579,31 @@ export async function listModels(channel, { timeout = 8_000 } = {}) {
     }),
   )
 
-  // 渠道声明过列表时，只保留声明过的 —— 避免把别的渠道的子渠道混进来
-  if (!declared) return results
-  return results
+  // 手动试用的模型：即便渠道声明里没有，也要进下拉
+  const extraResults = extras.map((model) => ({
+    model,
+    available: true,
+    reason: '手动试用',
+  }))
+
+  // 渠道声明过列表时，默认只保留声明过的 —— 避免把别的渠道的子渠道混进来；
+  // 但 extras 始终附加（用户明确要试的新模型）。
+  if (!declared) {
+    const byName = new Map(results.map((r) => [r.model, r]))
+    for (const item of extraResults) byName.set(item.model, item)
+    return [...byName.values()]
+  }
+
+  const declaredResults = results
     .filter((r) => r.available === true)
     .sort((a, b) => declared.indexOf(a.model) - declared.indexOf(b.model))
+  const seen = new Set(declaredResults.map((r) => r.model))
+  for (const item of extraResults) {
+    if (seen.has(item.model)) continue
+    declaredResults.push(item)
+    seen.add(item.model)
+  }
+  return declaredResults
 }
 
 function shortReason(text) {

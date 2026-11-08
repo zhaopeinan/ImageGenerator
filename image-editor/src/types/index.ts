@@ -133,6 +133,11 @@ export interface Channel {
    */
   unavailableModels?: Record<string, { reason: string; at: string }>
   /**
+   * 用户手动试用的模型名（渠道 `/v1/models` 尚未声明时仍可出现在下拉）。
+   * 例如上游新出 gpt-image-2.6，想先试能否走通。
+   */
+  extraModels?: string[]
+  /**
    * 该渠道是否透传 `quality` 参数。
    *
    * 实测（gpt-image-2，同一提示词仅改 quality）：

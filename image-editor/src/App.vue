@@ -375,6 +375,57 @@ async function probeModels(id: string) {
   }
 }
 
+async function refreshCurrentModels() {
+  const id = store.selectedChannelId
+  if (!id) {
+    notify('请先选择渠道', 'error')
+    return
+  }
+  await probeModels(id)
+}
+
+const tryModelDraft = ref('')
+const tryingModel = ref(false)
+
+async function tryModelOnChannel(
+  id: string,
+  modelName: string,
+  opts: { force?: boolean } = {},
+) {
+  const result = await store.tryChannelModel(id, modelName, opts)
+  if (result.ok) {
+    await refreshChannels()
+    notify(result.message)
+    return result
+  }
+  if (result.canForce && !opts.force) {
+    const ok = window.confirm(`${result.message}\n\n仍要强制加入下拉吗？`)
+    if (ok) return tryModelOnChannel(id, modelName, { force: true })
+  }
+  notify(result.message, 'error')
+  return result
+}
+
+async function submitTryModel() {
+  const id = store.selectedChannelId
+  const name = tryModelDraft.value.trim()
+  if (!id) {
+    notify('请先选择渠道', 'error')
+    return
+  }
+  if (!name) {
+    notify('请填写要试用的模型名', 'error')
+    return
+  }
+  tryingModel.value = true
+  try {
+    const result = await tryModelOnChannel(id, name)
+    if (result.ok) tryModelDraft.value = ''
+  } finally {
+    tryingModel.value = false
+  }
+}
+
 /**
  * 恢复被屏蔽的模型到下拉。
  *
@@ -388,6 +439,16 @@ async function unblockModel(id: string, modelName: string) {
     notify(`已恢复 ${modelName}，可重新选择`)
   } catch (err) {
     notify(err instanceof Error ? err.message : '恢复失败', 'error')
+  }
+}
+
+async function removeExtraModel(id: string, modelName: string) {
+  try {
+    await store.removeChannelExtraModel(id, modelName)
+    await refreshChannels()
+    notify(`已移除试用模型 ${modelName}`)
+  } catch (err) {
+    notify(err instanceof Error ? err.message : '移除失败', 'error')
   }
 }
 
@@ -864,13 +925,42 @@ watch(
               模型
               <span class="hint" style="display: inline; margin-left: 0.5rem">子渠道</span>
             </label>
-            <SelectBox
-              id="model"
-              v-model="store.model"
-              :options="modelSelectOptions"
-              placeholder="选择模型"
-              empty-text="该渠道未提供图像模型"
-            />
+            <div class="model-toolbar">
+              <SelectBox
+                id="model"
+                v-model="store.model"
+                :options="modelSelectOptions"
+                placeholder="选择模型"
+                empty-text="该渠道未提供图像模型"
+              />
+              <button
+                type="button"
+                class="button button-sm"
+                :disabled="!store.selectedChannelId || isProbingModels"
+                title="重新拉取当前渠道支持的模型列表（不产生出图费用）"
+                @click="refreshCurrentModels"
+              >
+                {{ isProbingModels ? '更新中' : '更新模型' }}
+              </button>
+            </div>
+            <div class="try-model-row">
+              <input
+                v-model="tryModelDraft"
+                class="input"
+                placeholder="试用新模型，如 gpt-image-2.6"
+                :disabled="!store.selectedChannelId || tryingModel"
+                @keydown.enter.prevent="submitTryModel()"
+              >
+              <button
+                type="button"
+                class="button button-sm"
+                :disabled="!store.selectedChannelId || tryingModel || !tryModelDraft.trim()"
+                title="探测上游是否接受该模型名；通过后加入下拉"
+                @click="submitTryModel()"
+              >
+                {{ tryingModel ? '探测中' : '试用' }}
+              </button>
+            </div>
             <p
               v-if="isProbingModels"
               class="hint"
@@ -1227,6 +1317,8 @@ watch(
       @test="testChannel"
       @probe="probeModels"
       @unblock="unblockModel"
+      @try-model="tryModelOnChannel"
+      @remove-extra="removeExtraModel"
       @refresh="refreshChannels"
     />
 

@@ -35,6 +35,13 @@ const emit = defineEmits<{
   (e: 'test', id: string): Promise<void>
   (e: 'probe', id: string): Promise<void>
   (e: 'unblock', id: string, model: string): Promise<void>
+  (
+    e: 'try-model',
+    id: string,
+    model: string,
+    opts?: { force?: boolean },
+  ): Promise<void>
+  (e: 'remove-extra', id: string, model: string): Promise<void>
   (e: 'refresh'): Promise<void>
 }>()
 
@@ -71,6 +78,8 @@ const testing = ref<string | null>(null)
 const probing = ref<string | null>(null)
 /** 正在恢复的模型，格式 `${channelId}:${model}`，用于按钮级 loading */
 const unblocking = ref<string | null>(null)
+const trying = ref<string | null>(null)
+const tryDrafts = ref<Record<string, string>>({})
 const testResults = ref<Record<string, { ok: boolean; message: string }>>({})
 const formError = ref('')
 
@@ -203,6 +212,30 @@ async function probeModels(channel: Channel) {
   } finally {
     probing.value = null
   }
+}
+
+async function tryModel(channel: Channel) {
+  const model = (tryDrafts.value[channel.id] ?? '').trim()
+  if (!model) {
+    window.alert('请先填写要试用的模型名，例如 gpt-image-2.6')
+    return
+  }
+  trying.value = channel.id
+  try {
+    await emit('try-model', channel.id, model)
+    tryDrafts.value = { ...tryDrafts.value, [channel.id]: '' }
+  } finally {
+    trying.value = null
+  }
+}
+
+async function removeExtra(channel: Channel, model: string) {
+  if (!window.confirm(`从「${channel.name}」的试用列表移除 ${model}？`)) return
+  await emit('remove-extra', channel.id, model)
+}
+
+function extraModels(channel: Channel): string[] {
+  return Array.isArray(channel.extraModels) ? channel.extraModels : []
 }
 
 async function remove(channel: Channel) {
@@ -496,16 +529,60 @@ async function remove(channel: Channel) {
               </span>
             </div>
           </div>
+
+          <div
+            v-if="extraModels(c).length"
+            class="blocked-models"
+          >
+            <span class="blocked-models-label">手动试用 {{ extraModels(c).length }} 个</span>
+            <div class="blocked-models-list">
+              <span
+                v-for="m in extraModels(c)"
+                :key="m"
+                class="blocked-chip extra-chip"
+                title="来自手动试用，不在渠道声明列表中"
+              >
+                <span class="blocked-chip-name">{{ m }}</span>
+                <button
+                  type="button"
+                  class="blocked-chip-restore"
+                  title="从试用列表移除"
+                  @click="removeExtra(c, m)"
+                >
+                  移除
+                </button>
+              </span>
+            </div>
+          </div>
+
+          <div class="try-model-row">
+            <input
+              class="input"
+              :value="tryDrafts[c.id] ?? ''"
+              placeholder="试用新模型，如 gpt-image-2.6"
+              @input="tryDrafts[c.id] = ($event.target as HTMLInputElement).value"
+              @keydown.enter.prevent="tryModel(c)"
+            >
+            <button
+              type="button"
+              class="button button-sm"
+              :disabled="trying === c.id"
+              title="廉价探测后加入该渠道模型下拉；明确不支持时会提示"
+              @click="tryModel(c)"
+            >
+              {{ trying === c.id ? '探测中' : '试用' }}
+            </button>
+          </div>
         </div>
 
         <div style="display: flex; flex-wrap: wrap; gap: 0.375rem; justify-content: flex-end">
           <button
             type="button"
             class="button button-sm"
-            title="检查该渠道哪些模型未开通（失败的会立即排除，不产生费用）"
+            title="重新拉取该渠道 /v1/models，并刷新下拉（不产生出图费用）"
             @click="probeModels(c)"
           >
-            {{ probing === c.id ? '检测中' : '检测模型' }}
+            {{ probing === c.id ? '更新中' : '更新模型' }}
           </button>
           <button
             type="button"

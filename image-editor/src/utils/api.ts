@@ -98,6 +98,56 @@ export const channelsApi = {
   },
 
   /**
+   * 试用尚未出现在渠道声明里的模型（如 gpt-image-2.6）。
+   * 明确 model_not_found 时默认拒绝；force=true 可强制加入下拉。
+   */
+  async tryModel(
+    channelId: string,
+    input: { model: string; force?: boolean },
+  ): Promise<{
+    ok: boolean
+    model: string
+    available: boolean | null
+    message: string
+    channel: Channel
+    canForce?: boolean
+  }> {
+    const response = await fetch(`${BASE}/api/channels/${channelId}/models/try`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+    const text = await response.text()
+    let payload: Record<string, unknown> = {}
+    try {
+      payload = text ? JSON.parse(text) : {}
+    } catch {
+      payload = { error: { message: text } }
+    }
+    if (!response.ok) {
+      const err = payload.error as { message?: string } | undefined
+      const error = new Error(err?.message ?? (payload.message as string) ?? `HTTP ${response.status}`) as Error & {
+        canForce?: boolean
+      }
+      error.canForce = payload.canForce === true
+      throw error
+    }
+    return payload as {
+      ok: boolean
+      model: string
+      available: boolean | null
+      message: string
+      channel: Channel
+      canForce?: boolean
+    }
+  },
+
+  removeExtraModel(channelId: string, model: string): Promise<{ channel: Channel }> {
+    const qs = new URLSearchParams({ model }).toString()
+    return request(`/api/channels/${channelId}/models/extra?${qs}`, { method: 'DELETE' })
+  },
+
+  /**
    * 连通性测试。返回耗时与上游错误摘要，不抛异常。
    * @param mode generate 测文生图能力，edit 测图生图能力。
    *              「仅支持文生图」的模型走 edit 会返回 model_not_found，属预期。

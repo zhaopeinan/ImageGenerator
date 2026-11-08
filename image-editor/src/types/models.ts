@@ -35,6 +35,7 @@ export const MODEL_NOTES: Record<string, { note: string; supportsEdit: boolean |
   'gpt-image-2.5': { note: '仅支持文生图', supportsEdit: false },
   'gpt-image-2.5-flare': { note: '兼顾速度与画质', supportsEdit: null },
   'gpt-image-2.5-sunburst': { note: '高精度专业版', supportsEdit: null },
+  'gpt-image-2.6': { note: '新版候选，需渠道声明或手动试用后验证', supportsEdit: null },
   // 以下两个在 woyao 的 /v1/models 里发现（2026-10-18 实测），
   // 描述未经验证，按「渠道提供」中性表述，实际能力以「测试」为准
   'gemini-3-pro-image': { note: 'Gemini 图像模型（渠道提供）', supportsEdit: null },
