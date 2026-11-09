@@ -361,11 +361,15 @@ async function copyDataUrl(item: GalleryItem) {
  * 真正会花钱的是「测试」，那条路径才写入黑名单。
  */
 async function probeModels(id: string) {
-  await store.probeChannelModels(id, true)
+  const result = await store.probeChannelModels(id, true)
+  if (!result.ok) {
+    notify(result.message || '更新模型列表失败', 'error')
+    return
+  }
   const blocked = [...store.unavailableModelSet]
   const available = store.channelModelIds
   if (available.length === 0) {
-    notify('未能读取该渠道的模型列表，请检查端点或 Key')
+    notify('未能读取该渠道的模型列表，请检查端点或 Key', 'error')
     return
   }
   if (blocked.length === 0) {
@@ -630,7 +634,13 @@ const FORMAT_OPTIONS: { value: OutputFormat; label: string }[] = [
  *
  * 探测未完成时 channelModelIds 为空，usableModels 会降级用内置兜底列表。
  */
-const modelOptions = computed(() => usableModels(store.activeTab, store.channelModelIds))
+const modelOptions = computed(() => {
+  const id = store.selectedChannelId
+  // undefined = 尚未探测 → 用内置兜底；已探测（含空数组）则严格用渠道结果
+  const probed = id ? store.channelModels[id] : undefined
+  if (probed === undefined) return usableModels(store.activeTab, null)
+  return usableModels(store.activeTab, store.channelModelIds)
+})
 
 const modelSelectOptions = computed(() =>
   modelOptions.value.map((m) => ({

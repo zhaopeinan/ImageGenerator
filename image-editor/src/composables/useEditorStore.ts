@@ -1085,7 +1085,6 @@ async function unblockChannelModel(channelId: string, modelName: string): Promis
   })
 
   // 强制重新探测，让模型重新出现在下拉里
-  channelModels.value = { ...channelModels.value, [channelId]: [] }
   await probeChannelModels(channelId, true)
 }
 
@@ -1107,7 +1106,6 @@ async function tryChannelModel(
       force: opts.force,
     })
     channels.value = channels.value.map((c) => (c.id === channelId ? result.channel : c))
-    channelModels.value = { ...channelModels.value, [channelId]: [] }
     await probeChannelModels(channelId, true)
     if (result.model) {
       model.value = result.model
@@ -1128,7 +1126,6 @@ async function removeChannelExtraModel(channelId: string, modelName: string): Pr
   if (!channelId || !modelName) return
   const { channel } = await channelsApi.removeExtraModel(channelId, modelName)
   channels.value = channels.value.map((c) => (c.id === channelId ? channel : c))
-  channelModels.value = { ...channelModels.value, [channelId]: [] }
   await probeChannelModels(channelId, true)
   if (model.value === modelName) {
     const next = (channelModels.value[channelId] ?? []).find(
@@ -1141,25 +1138,58 @@ async function removeChannelExtraModel(channelId: string, modelName: string): Pr
   }
 }
 
-async function probeChannelModels(channelId: string, force = false): Promise<void> {
-    if (!channelId) return
-    if (!force && channelModels.value[channelId]) return
+async function probeChannelModels(
+    channelId: string,
+    force = false,
+  ): Promise<{ ok: boolean; message?: string; keptPrevious?: boolean }> {
+    if (!channelId) return { ok: false, message: '缺少渠道' }
+    if (!force && channelModels.value[channelId] !== undefined) return { ok: true }
+
+    const previous = channelModels.value[channelId]
+    const previousConfirmed = (previous ?? []).filter((m) => m.available === true)
 
     modelsProbing.value = true
     try {
-      const { models } = await channelsApi.probeModels(channelId)
-      channelModels.value = { ...channelModels.value, [channelId]: models }
-      // 当前模型若被确认不可用，回退到第一个可用的
-      const unavailable = models.filter((m) => m.available === false).map((m) => m.model)
-      if (unavailable.includes(model.value)) {
-        const fallback = models.find((m) => m.available !== false)
-        if (fallback) {
-          model.value = fallback.model
-          void persistDraft()
+      const { models, fetchError, message } = await channelsApi.probeModels(channelId)
+      const confirmed = models.filter((m) => m.available === true)
+
+      // 拉取失败或没有任何确认可用项：保留旧列表，避免下拉退化成内置兜底三项
+      if (fetchError || confirmed.length === 0) {
+        if (previousConfirmed.length > 0) {
+          return {
+            ok: false,
+            keptPrevious: true,
+            message: fetchError || message || '未能更新模型列表，已保留原来的结果',
+          }
+        }
+        channelModels.value = { ...channelModels.value, [channelId]: models }
+        return {
+          ok: false,
+          message: fetchError || message || '未能读取该渠道的模型列表，请检查端点或 Key',
         }
       }
-    } catch {
-      // 探测失败不做任何过滤
+
+      channelModels.value = { ...channelModels.value, [channelId]: models }
+      // 当前模型若被确认不可用，回退到第一个可用的
+      if (!confirmed.some((m) => m.model === model.value)) {
+        model.value = confirmed[0].model
+        void persistDraft()
+      }
+      return { ok: true }
+    } catch (err) {
+      const previousConfirmed = (channelModels.value[channelId] ?? []).filter(
+        (m) => m.available === true,
+      )
+      return {
+        ok: false,
+        keptPrevious: previousConfirmed.length > 0,
+        message:
+          err instanceof Error
+            ? err.message
+            : previousConfirmed.length > 0
+              ? '更新失败，已保留原来的模型列表'
+              : '未能读取该渠道的模型列表',
+      }
     } finally {
       modelsProbing.value = false
     }
@@ -1196,8 +1226,16 @@ async function probeChannelModels(channelId: string, force = false): Promise<voi
      * 模型下拉里那个不可用的选项还在 —— 看起来像没生效。
      */
     if (result.modelBlocked) {
-      // 直接 delete 不触发响应式，要整体替换一次对象
-      channelModels.value = { ...channelModels.value, [id]: [] }
+      // 先本地剔除，再强制拉一次；拉取失败也不要把整表清空成兜底三项
+      if (opts.model) {
+        const prev = channelModels.value[id]
+        if (prev) {
+          channelModels.value = {
+            ...channelModels.value,
+            [id]: prev.filter((m) => m.model !== opts.model),
+          }
+        }
+      }
       await probeChannelModels(id, true)
     }
 

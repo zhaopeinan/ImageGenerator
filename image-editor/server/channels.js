@@ -332,7 +332,8 @@ export async function tryExtraModel(id, modelName, { force = false, timeout = 8_
   }
 
   const extras = ensureExtraModels(channel)
-  const declared = await fetchDeclaredModels(channel)
+  const declaredFetch = await fetchDeclaredModels(channel)
+  const declared = declaredFetch.models
   if (declared?.includes(model) || extras.includes(model)) {
     // 已在列表里：顺手清黑名单，方便直接选用
     if (channel.unavailableModels?.[model]) {
@@ -497,7 +498,26 @@ export { toPublic, hasUsableKey }
  */
 export async function listModels(channel, { timeout = 8_000 } = {}) {
   // 第一步：渠道自己声明的列表
-  const allDeclared = await fetchDeclaredModels(channel)
+  const declaredFetch = await fetchDeclaredModels(channel)
+  const extras = (Array.isArray(channel?.extraModels) ? channel.extraModels : [])
+    .map((m) => String(m).trim())
+    .filter(Boolean)
+
+  /**
+   * `/v1/models` 网络失败时绝不能再去扫内置兜底表：
+   * 探测也会连不上 → 全是 available:null → 前端筛掉后只剩 3 个 FALLBACK，
+   * 用户会以为「TokenLab 只剩三个模型」。应原样报错，让前端保留旧列表。
+   */
+  if (declaredFetch.error) {
+    const blocked = channel?.unavailableModels ?? {}
+    const keptExtras = extras
+      .filter((m) => !(m in blocked))
+      .map((model) => ({ model, available: true, reason: '手动试用' }))
+    return {
+      models: keptExtras,
+      fetchError: `读取渠道模型列表失败：${declaredFetch.error}`,
+    }
+  }
 
   /**
    * 剔除「实测不可用」的模型。
@@ -507,10 +527,9 @@ export async function listModels(channel, { timeout = 8_000 } = {}) {
    * 所以这里以实测记录为准 —— 用户也可以在渠道管理里手动标记。
    */
   const blocked = channel?.unavailableModels ?? {}
+  const allDeclared = declaredFetch.models
   const declared = allDeclared?.filter((m) => !(m in blocked)) ?? null
-  const extras = (Array.isArray(channel?.extraModels) ? channel.extraModels : [])
-    .map((m) => String(m).trim())
-    .filter((m) => m && !(m in blocked))
+  const extrasOk = extras.filter((m) => !(m in blocked))
 
   // 第二步：内置兜底候选（渠道没给列表时，至少能探这些）
   const FALLBACK = [
@@ -527,8 +546,8 @@ export async function listModels(channel, { timeout = 8_000 } = {}) {
   // 被实测屏蔽的模型一律不进候选，避免兜底路径把它"复活"
   const FALLBACK_OK = FALLBACK.filter((m) => !(m in blocked))
   const candidates = declared
-    ? [...new Set([...declared, ...extras, ...FALLBACK_OK])]
-    : [...new Set([...extras, ...FALLBACK_OK])]
+    ? [...new Set([...declared, ...extrasOk, ...FALLBACK_OK])]
+    : [...new Set([...extrasOk, ...FALLBACK_OK])]
 
   const boundary = 'ieprobe'
   // boundary 值不含连字符；body 里的分隔符才加 `--`。两者必须一致。
@@ -544,7 +563,7 @@ export async function listModels(channel, { timeout = 8_000 } = {}) {
       if (declared?.includes(model)) {
         return { model, available: true, reason: '渠道已声明' }
       }
-      if (extras.includes(model)) {
+      if (extrasOk.includes(model)) {
         return { model, available: true, reason: '手动试用' }
       }
       const body = Buffer.concat([
@@ -580,7 +599,7 @@ export async function listModels(channel, { timeout = 8_000 } = {}) {
   )
 
   // 手动试用的模型：即便渠道声明里没有，也要进下拉
-  const extraResults = extras.map((model) => ({
+  const extraResults = extrasOk.map((model) => ({
     model,
     available: true,
     reason: '手动试用',
@@ -591,7 +610,7 @@ export async function listModels(channel, { timeout = 8_000 } = {}) {
   if (!declared) {
     const byName = new Map(results.map((r) => [r.model, r]))
     for (const item of extraResults) byName.set(item.model, item)
-    return [...byName.values()]
+    return { models: [...byName.values()] }
   }
 
   const declaredResults = results
@@ -603,7 +622,7 @@ export async function listModels(channel, { timeout = 8_000 } = {}) {
     declaredResults.push(item)
     seen.add(item.model)
   }
-  return declaredResults
+  return { models: declaredResults }
 }
 
 function shortReason(text) {
@@ -616,59 +635,68 @@ function shortReason(text) {
 /**
  * 读取渠道自己声明的模型列表（`GET /v1/models`）。
  *
- * 这是最权威也最省事的判据 —— 渠道自己说的，不存在误判。
- * 返回过滤后的图像模型名数组；拿不到时返回 null（调用方降级到排除法）。
+ * 返回：
+ *  - `{ models: string[], error: null }`  声明成功
+ *  - `{ models: null, error: null }`      端点通了但没有图像模型 → 调用方降级排除法
+ *  - `{ models: null, error: string }`    网络/HTTP 失败 → 调用方应保留旧列表，勿扫兜底表
  */
 async function fetchDeclaredModels(channel, timeout = 10_000) {
   let target
   try {
     target = new URL(`${channel.endpoint}/v1/models`)
   } catch {
-    return null
+    return { models: null, error: '端点不合法' }
   }
 
-  return new Promise((resolve) => {
-    const doRequest = target.protocol === 'https:' ? httpsRequest : httpRequest
-    const req = doRequest(
-      {
-        protocol: target.protocol,
-        hostname: target.hostname,
-        port: target.port || (target.protocol === 'https:' ? 443 : 80),
-        path: `${target.pathname}${target.search}`,
-        method: 'GET',
-        headers: { Authorization: `Bearer ${channel.apiKey}` },
-        timeout,
-      },
-      (res) => {
-        const chunks = []
-        res.on('data', (c) => chunks.push(c))
-        res.on('end', () => {
-          // 非 2xx 一律视为「拿不到」，走排除法
-          if ((res.statusCode ?? 0) < 200 || (res.statusCode ?? 0) >= 300) {
-            resolve(null)
-            return
-          }
-          try {
-            const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8'))
-            const list = Array.isArray(parsed?.data) ? parsed.data : []
-            const models = list
-              .map((m) => (typeof m === 'string' ? m : m?.id))
-              .filter((id) => typeof id === 'string')
-              .filter((id) => /image|dall-e/i.test(id))
-            resolve(models.length > 0 ? models : null)
-          } catch {
-            resolve(null)
-          }
-        })
-      },
-    )
-    req.on('error', () => resolve(null))
-    req.on('timeout', () => {
-      req.destroy()
-      resolve(null)
+  const attempt = () =>
+    new Promise((resolve) => {
+      const doRequest = target.protocol === 'https:' ? httpsRequest : httpRequest
+      const req = doRequest(
+        {
+          protocol: target.protocol,
+          hostname: target.hostname,
+          port: target.port || (target.protocol === 'https:' ? 443 : 80),
+          path: `${target.pathname}${target.search}`,
+          method: 'GET',
+          headers: { Authorization: `Bearer ${channel.apiKey}` },
+          timeout,
+        },
+        (res) => {
+          const chunks = []
+          res.on('data', (c) => chunks.push(c))
+          res.on('end', () => {
+            const status = res.statusCode ?? 0
+            if (status < 200 || status >= 300) {
+              resolve({ models: null, error: `HTTP ${status}` })
+              return
+            }
+            try {
+              const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+              const list = Array.isArray(parsed?.data) ? parsed.data : []
+              const models = list
+                .map((m) => (typeof m === 'string' ? m : m?.id))
+                .filter((id) => typeof id === 'string')
+                .filter((id) => /image|dall-e/i.test(id))
+              resolve({ models: models.length > 0 ? models : null, error: null })
+            } catch {
+              resolve({ models: null, error: '模型列表响应不是合法 JSON' })
+            }
+          })
+        },
+      )
+      req.on('error', (err) => resolve({ models: null, error: err.message || '网络错误' }))
+      req.on('timeout', () => {
+        req.destroy()
+        resolve({ models: null, error: '读取超时' })
+      })
+      req.end()
     })
-    req.end()
-  })
+
+  const first = await attempt()
+  if (!first.error) return first
+  // 瞬时断连（如 ECONNRESET）再试一次
+  const second = await attempt()
+  return second.error ? first : second
 }
 
 function probe(channel, body, boundary, timeout) {

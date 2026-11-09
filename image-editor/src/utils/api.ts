@@ -82,7 +82,11 @@ export const channelsApi = {
    */
   probeModels(
     id: string,
-  ): Promise<{ models: { model: string; available: boolean | null; reason: string }[]; message?: string }> {
+  ): Promise<{
+    models: { model: string; available: boolean | null; reason: string }[]
+    message?: string
+    fetchError?: string
+  }> {
     return request(`/api/channels/${id}/models`)
   },
 

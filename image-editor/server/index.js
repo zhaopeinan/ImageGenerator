@@ -210,10 +210,14 @@ async function handleChannelsAPI(req, res, url) {
       return true
     }
     try {
-      const models = await listModels(channel)
-      sendJSON(res, 200, { models, channel: id })
+      const result = await listModels(channel)
+      sendJSON(res, 200, {
+        models: result.models ?? [],
+        channel: id,
+        ...(result.fetchError ? { fetchError: result.fetchError, message: result.fetchError } : {}),
+      })
     } catch (err) {
-      sendJSON(res, 200, { models: [], message: err.message })
+      sendJSON(res, 200, { models: [], fetchError: err.message, message: err.message })
     }
     return true
   }

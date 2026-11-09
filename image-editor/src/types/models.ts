@@ -245,16 +245,18 @@ export function isModelUsable(id: string, mode: 'generate' | 'edit'): boolean {
  * 取某渠道在给定模式下可选的模型列表。
  *
  * @param mode        当前模式
- * @param channelIds  该渠道**实际支持**的模型名；为空表示探测未完成/失败，
- *                    此时降级用内置兜底列表（宁可多列也不误伤）
+ * @param channelIds  该渠道**实际支持**的模型名。
+ *                    `null` = 尚未探测，降级用内置兜底（宁可多列不误伤）；
+ *                    `[]`   = 已探测但没有可用项 / 探测失败且无缓存，显示空列表，
+ *                             **不要**再悄悄换成兜底三项，否则用户会以为渠道只剩三个模型。
  *
  * 这是「换渠道后模型下拉跟着变」的关键：列表来源是渠道，不是前端常量。
  */
 export function usableModels(
   mode: 'generate' | 'edit',
-  channelIds: string[] = [],
+  channelIds: string[] | null = null,
 ): ModelInfo[] {
-  const ids = channelIds.length > 0 ? channelIds : FALLBACK_MODELS
+  const ids = channelIds === null ? FALLBACK_MODELS : channelIds
   return ids.filter((id) => isModelUsable(id, mode)).map(describeModel)
 }
 
