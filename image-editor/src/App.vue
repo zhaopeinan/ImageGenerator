@@ -36,6 +36,8 @@ const settingsOpen = ref(false)
 const confirmState = ref<{ kind: 'delete' | 'clear'; id?: string } | null>(null)
 /** 当前展开详情的画廊条目 id，空串表示收起 */
 const expandedItem = ref('')
+/** 灯箱当前展示的画廊条目；null 表示未打开 */
+const lightboxItem = ref<GalleryItem | null>(null)
 const testResults = ref<Record<string, { ok: boolean; message: string }>>({})
 
 const toasts = ref<{ id: number; message: string; kind: 'success' | 'error' }[]>([])
@@ -462,6 +464,24 @@ function requestDelete(item: GalleryItem) {
   confirmState.value = { kind: 'delete', id: item.id }
 }
 
+/** 点击画廊缩略图，放大查看大图 */
+function openLightbox(item: GalleryItem) {
+  lightboxItem.value = item
+}
+
+function closeLightbox() {
+  lightboxItem.value = null
+}
+
+/** 灯箱内左右切换，范围是当前筛选下的画廊，到头循环 */
+function stepLightbox(delta: number) {
+  const list = store.filteredGallery
+  if (!lightboxItem.value || list.length === 0) return
+  const index = list.findIndex((it) => it.id === lightboxItem.value!.id)
+  const base = index >= 0 ? index : 0
+  lightboxItem.value = list[(base + delta + list.length) % list.length]
+}
+
 /** 展开/收起某张图的详情。同时只能展开一张，避免画廊被撑得很乱。 */
 function toggleExpand(id: string) {
   expandedItem.value = expandedItem.value === id ? '' : id
@@ -534,6 +554,20 @@ function onBeforeUnload(event: BeforeUnloadEvent) {
 }
 
 function onKeyDown(event: KeyboardEvent) {
+  // 灯箱层级最高：Esc 关闭，左右键切换图片
+  if (lightboxItem.value) {
+    if (event.key === 'Escape') {
+      lightboxItem.value = null
+    } else if (event.key === 'ArrowLeft') {
+      stepLightbox(-1)
+    } else if (event.key === 'ArrowRight') {
+      stepLightbox(1)
+    } else {
+      return
+    }
+    event.preventDefault()
+    return
+  }
   if (event.key !== 'Escape') return
   // 弹层优先关闭，再取消生成
   if (confirmState.value) {
@@ -1245,6 +1279,8 @@ watch(
               :src="item.src"
               :alt="item.prompt"
               loading="lazy"
+              title="点击查看大图"
+              @click="openLightbox(item)"
             >
 
             <div class="gallery-meta">
@@ -1336,6 +1372,53 @@ watch(
       :open="settingsOpen"
       @close="settingsOpen = false"
     />
+
+    <!-- 画廊大图灯箱：点暗处或 × 关闭，左右键/箭头切换 -->
+    <div
+      v-if="lightboxItem"
+      class="lightbox-backdrop"
+      @click.self="closeLightbox"
+    >
+      <button
+        type="button"
+        class="lightbox-close"
+        aria-label="关闭"
+        @click="closeLightbox"
+      >
+        ×
+      </button>
+      <button
+        v-if="store.filteredGallery.length > 1"
+        type="button"
+        class="lightbox-nav lightbox-prev"
+        aria-label="上一张"
+        @click="stepLightbox(-1)"
+      >
+        ‹
+      </button>
+      <figure class="lightbox-stage">
+        <img
+          :src="lightboxItem.src"
+          :alt="lightboxItem.prompt"
+          class="lightbox-img"
+        >
+        <figcaption
+          v-if="lightboxItem.prompt"
+          class="lightbox-caption"
+        >
+          {{ lightboxItem.prompt }}
+        </figcaption>
+      </figure>
+      <button
+        v-if="store.filteredGallery.length > 1"
+        type="button"
+        class="lightbox-nav lightbox-next"
+        aria-label="下一张"
+        @click="stepLightbox(1)"
+      >
+        ›
+      </button>
+    </div>
 
     <!-- 确认对话框 -->
     <div
