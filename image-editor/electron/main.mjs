@@ -70,6 +70,29 @@ function findFreePort(host = '127.0.0.1') {
   })
 }
 
+// 画廊图片存在渲染端 IndexedDB，按「源 = 协议+IP+端口」隔离；
+// 每次启动随机端口会让已有画廊失效（看起来像图片全丢了）。
+// 因此优先复用历史会话中已存有画廊数据的端口（新到旧），
+// 全部被占用时才回退到随机端口。
+const PREFERRED_PORTS = [59643, 64226, 57861]
+
+function isPortFree(host, port) {
+  return new Promise((resolve) => {
+    const srv = net.createServer()
+    srv.once('error', () => resolve(false))
+    srv.once('listening', () => srv.close(() => resolve(true)))
+    srv.listen(port, host)
+  })
+}
+
+async function pickServerPort(host = '127.0.0.1') {
+  for (const port of PREFERRED_PORTS) {
+    if (await isPortFree(host, port)) return port
+  }
+  console.warn('[神笔] 首选端口均被占用，回退随机端口（画廊可能显示为空）')
+  return findFreePort(host)
+}
+
 async function waitHealth(base, tries = 50) {
   for (let i = 0; i < tries; i++) {
     try {
@@ -122,7 +145,7 @@ async function startBackend() {
   process.env.SHENBI_DATA_DIR = dataDir
   process.env.HOST = '127.0.0.1'
 
-  const port = await findFreePort()
+  const port = await pickServerPort()
   process.env.PORT = String(port)
 
   const serverPath = join(projectRoot(), 'server', 'index.js')
